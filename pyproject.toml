@@ -1,0 +1,24 @@
+[project]
+name = "intern-assignment"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "chromadb>=1.2.1",
+    "ddgs>=9.6.1",
+    "dotenv>=0.9.9",
+    "fastapi[standard]>=0.119.1",
+    "fastmcp>=2.12.5",
+    "langchain>=1.0.2",
+    "langchain-text-splitters>=1.0.0",
+    "markdown>=3.9",
+    "opencv-python>=4.12.0.88",
+    "playwright>=1.55.0",
+    "psycopg2>=2.9.11",
+    "pwdlib>=0.2.1",
+    "pydantic-ai>=1.3.0",
+    "pyjwt>=2.10.1",
+    "pytesseract>=0.3.13",
+    "sqlalchemy>=2.0.44",
+]

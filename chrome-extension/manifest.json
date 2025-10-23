@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "WebSurf AI",
+  "version": "1.0.0",
+  "description": "AI-powered web surfing assistant with intelligent browsing capabilities",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ],
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "action": {
+    "default_title": "Open WebSurf AI"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
