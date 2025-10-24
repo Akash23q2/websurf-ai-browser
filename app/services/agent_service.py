@@ -2,9 +2,9 @@
 from typing import TypedDict, Annotated, Sequence, Literal, List, Optional
 from dataclasses import dataclass
 from pydantic import BaseModel
-from pydantic_ai import Agent, RunContext,ModelMessage
+from pydantic_ai import Agent, RunContext, ModelMessage
 from datetime import datetime
-from app.schemas.agent_schema import AgentState, AgentMode,SummaryState
+from app.schemas.agent_schema import AgentState, AgentMode, SummaryState
 from app.services.rag_service import avilable_collections, query_engine, data_injestion
 from ddgs import DDGS
 import chromadb
@@ -12,7 +12,7 @@ import os
 import asyncio
 from dotenv import load_dotenv
 import json
-import asyncio
+from pathlib import Path
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
@@ -21,14 +21,47 @@ GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 from pydantic_ai.models.google import GoogleModel
 
 model = GoogleModel('gemini-2.5-flash')
-agent = Agent(model,system_prompt="You are an intelligent educational assistant that helps users learn and understand topics interactively. You can teach topics, generate notes, plan learning journeys,\
-                                   and answer questions using available knowledge sources.\
-                                   if not provided much context just say hey\
-                                   You are **WhisperNotes AI**, a friendly and knowledgeable AI tutor.**")
-summarize_agent=Agent(model,system_prompt="You are a helpful assistant that summarizes conversations into concise summaries.")
+agent = Agent(
+    model,
+    system_prompt="""You are websurf-ai, an intelligent assistant that helps users by:
+    - Answering questions with your knowledge
+    - Browsing the web using the browser tools
+    - Retrieving information from available knowledge sources
+    
+    You have access to browser automation tools to interact with web pages.
+    Always be friendly and helpful."""
+)
+summarize_agent = Agent(
+    model,
+    system_prompt="You are a helpful assistant that summarizes conversations into concise summaries."
+)
 
-SESSION_SUMMARY_HISTORY='' #Initialize empty session summary history
-SESSION_LIMIT_THRESHOLD=-1 # max tokens for session history, Implement later if needed.
+SESSION_SUMMARY_HISTORY = ''  # Initialize empty session summary history
+SESSION_LIMIT_THRESHOLD = -1  # max tokens for session history
+
+
+def get_browser_script_path():
+    """Find the browser-mcp.js script path"""
+    # Try environment variable first
+    env_path = os.getenv('MCP_BROWSER_SCRIPT_PATH')
+    if env_path and os.path.exists(env_path):
+        return env_path
+    
+    # Try relative paths
+    script_paths = [
+        'playwright-mcp/browser-mcp.js',
+        'browser-mcp.js',
+        '../playwright-mcp/browser-mcp.js',
+        Path(__file__).parent.parent.parent / 'playwright-mcp' / 'browser-mcp.js',
+    ]
+    
+    for path in script_paths:
+        path_str = str(path)
+        if os.path.exists(path_str):
+            return os.path.abspath(path_str)
+    
+    return None
+
 
 ## Dependencies ##
 @dataclass
@@ -60,6 +93,7 @@ class SupportDependencies:
         now = datetime.now()
         return f"Current date and time: {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
+
 ## Utility Functions ##
 async def format_results_for_llm(results: list) -> str:
     if not results:
@@ -74,18 +108,25 @@ async def format_results_for_llm(results: list) -> str:
             lines.append(formatted)
     return "\n".join(lines) if lines else "No valid results found."
 
+
 ## Tools Definitions ##
 @agent.tool
-@summarize_agent.tool 
+@summarize_agent.tool
 async def queryAllEmbeddings(ctx: RunContext[SupportDependencies], query: str, n_results: int = 5) -> str:
     """
-     find information avilable in the memory,  useful to answer specific questions about the learning content. AND to find  memory of past conversations. If nothing is found, fallback to web search.
-     Always try 'current_session' first, then all other embeddings, then web search.
+    Find information available in the memory, useful to answer specific questions about the learning content
+    and to find memory of past conversations. If nothing is found, fallback to web search.
+    Always try 'current_session' first, then all other embeddings.
     """
     try:
         # Always try 'current_session' first
         if 'current_session' in avilable_collections:
-            result = await retrieveFromEmbeddings(ctx, collection_name='current_session', query=query, n_results=n_results)
+            result = await retrieveFromEmbeddings(
+                ctx, 
+                collection_name='current_session', 
+                query=query, 
+                n_results=n_results
+            )
             if result and "No relevant" not in result and "Error" not in result:
                 return f"Answer from 'current_session':\n{result}"
 
@@ -93,15 +134,19 @@ async def queryAllEmbeddings(ctx: RunContext[SupportDependencies], query: str, n
         for collection_name in avilable_collections.keys():
             if collection_name == 'current_session':
                 continue
-            result = await retrieveFromEmbeddings(ctx, collection_name=collection_name, query=query, n_results=n_results)
+            result = await retrieveFromEmbeddings(
+                ctx, 
+                collection_name=collection_name, 
+                query=query, 
+                n_results=n_results
+            )
             if result and "No relevant" not in result and "Error" not in result:
                 return f"Answer from '{collection_name}' collection:\n{result}"
         
-        # fallback to web search
-        web_result = await searchWebTool(ctx, query=query, max_results=n_results)
-        return f"No relevant embedding found. Fallback to web search:\n{web_result}"
+        return "No relevant information found in embeddings."
     except Exception as e:
         return f"Error querying embeddings: {str(e)}"
+
 
 @agent.tool
 @summarize_agent.tool
@@ -112,7 +157,7 @@ async def retrieveFromEmbeddings(
     n_results: int = 5,
     db_path: str = None
 ) -> str:
-    '''find relevant information from avilable memory content/embeddings'''
+    """Find relevant information from available memory content/embeddings"""
     try:
         results = await query_engine(
             collection_name=collection_name,
@@ -125,21 +170,26 @@ async def retrieveFromEmbeddings(
     except Exception as e:
         return f"Error retrieving from embeddings: {str(e)}"
 
+
 @agent.tool
 async def searchWebTool(ctx: RunContext[SupportDependencies], query: str, max_results: int = 5) -> str:
-    '''perform web search to find relevant information'''
+    """Perform web search to find relevant information"""
     try:
         # Run blocking DDGS call in executor to avoid blocking event loop
         loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(None, lambda: list(DDGS().text(query, max_results=max_results)))
+        results = await loop.run_in_executor(
+            None, 
+            lambda: list(DDGS().text(query, max_results=max_results))
+        )
         return await format_results_for_llm(results)
     except Exception as e:
         return f"Web search unavailable (network error): {str(e)}. Please check your internet connection or try again later."
 
+
 @summarize_agent.tool
 async def logConversation(ctx: RunContext[SupportDependencies], user_message: str, ai_response: str) -> str:
+    """Log the conversation turn to 'current_session' embedding"""
     try:
-        '''log the conversation turn to 'current_session' embedding'''
         formatted_turn = f"User: {user_message}\nAI: {ai_response}\nTimestamp: {datetime.now().isoformat()}"
         await data_injestion(
             text_content=formatted_turn,
@@ -150,9 +200,10 @@ async def logConversation(ctx: RunContext[SupportDependencies], user_message: st
     except Exception as e:
         return f"Error logging conversation turn: {str(e)}"
 
+
 @agent.tool
 async def calculateExpression(ctx: RunContext[SupportDependencies], expression: str) -> str:
-    '''safely evaluate a mathematical expression or use it to answer calculation queries'''
+    """Safely evaluate a mathematical expression or use it to answer calculation queries"""
     try:
         allowed_names = {'abs': abs, 'round': round, 'min': min, 'max': max, 'sum': sum, 'pow': pow}
         result = eval(expression, {"__builtins__": {}}, allowed_names)
@@ -160,10 +211,12 @@ async def calculateExpression(ctx: RunContext[SupportDependencies], expression: 
     except Exception as e:
         return f"Error calculating expression: {str(e)}"
 
+
 async def get_memory_snippet(query_context: str = "", n_results: int = 10) -> str:
     """
-    Retrieves relevant context from chat histrory stored in 'current_session' embedding.
-    Always use it if you need past conversation context. or think  user is asking something related to past conversation.
+    Retrieves relevant context from chat history stored in 'current_session' embedding.
+    Always use it if you need past conversation context or think user is asking something 
+    related to past conversation.
     Returns empty string if nothing is found.
     """
     memory = await SupportDependencies.getConversationSummary(query=query_context, n_results=n_results)
@@ -171,36 +224,42 @@ async def get_memory_snippet(query_context: str = "", n_results: int = 10) -> st
         return ""
     return f"Relevant past conversation:\n{memory}\n"
 
+
 ## Prompts ##
 async def get_base_context() -> str:
-    """
-    Build the base agent context dynamically with awaited embeddings info.
-    """
+    """Build the base agent context dynamically with awaited embeddings info."""
     embeddings_info = await SupportDependencies.getPresentEmbeddingsInfo()
     return f"""
-You are an intelligent educational assistant with access to a conversation long term memory usinng Retrieval-Augmented Generation (RAG) system.
-You can retrieve and reason over the following embedding ''current_session'' which contains the conversation history of the current learning session.
+You are an intelligent educational assistant with access to:
+1. Conversation long-term memory using Retrieval-Augmented Generation (RAG) system
+2. Browser automation tools via MCP server (openPage, clickElement, typeText, etc.)
+
+Available embeddings:
 {embeddings_info}
 
-if its related give summarized context in your answer.
+The 'current_session' collection contains the conversation history of the current learning session.
+
 Tasks:
-1. Analyze and try to find the summary of previous conversation.
-2. draft its summary in your answer.
-3. Identify key points and form a well detailed answer.
+1. Analyze and try to find the summary of previous conversation
+2. Draft its summary in your answer
+3. Identify key points and form a well-detailed answer
+4. Use browser tools when you need to interact with web pages
 
 Query is --> \n\n
 """
+
 
 async def rag_query_prompt(query_context: str = ""):
     memory = await get_memory_snippet(query_context)
     return f"""{await get_base_context()}
 {memory}
 Retrieve and answer any factual or conceptual question:
-- Then, use the `queryAllEmbeddings` tool to find relevant info from all other embeddings.
-- If no relevant info is found in embeddings, use `searchWebTool`.
-- Cite the relevant embedding collection in your answer.
+- Use the `queryAllEmbeddings` tool to find relevant info from embeddings
+- If you need to browse a specific website, use the MCP browser tools
+- Cite the relevant embedding collection in your answer
 {query_context}
 """
+
 
 async def talk_prompt(query_context: str = ""):
     memory = await get_memory_snippet(query_context)
@@ -209,10 +268,11 @@ async def talk_prompt(query_context: str = ""):
 Engage in natural conversation while leveraging available knowledge:
 - Use conversational, friendly tone
 - Reference available embeddings when relevant using `queryAllEmbeddings`
-- Use `searchWebTool` for general knowledge if needed only if query involves current events or very recent info
+- Use browser MCP tools to access real-time web content when needed
 - Keep responses concise and engaging
 {query_context}
 """
+
 
 async def summarize_conversation_prompt(conversation_history: str = "", query_context: str = "", new_message: str = ''):
     return f"""You are a conversation summarizer that extracts and stores key information efficiently.
@@ -238,7 +298,6 @@ Follow these steps IN ORDER:
    - Identify what's NEW or IMPORTANT that isn't already captured
 
 3. CREATE SUMMARY
-
    - If conversation_history exists, create a focused summary of key points
    - Be specific: include names, dates, decisions, and commitments
    - Avoid generic statements
@@ -272,11 +331,8 @@ Example with history:
 Example without history:
 User: How do I reset my password? | AI: You can reset your password by clicking the "Forgot Password" link on the login page.
 [Exchange logged to current_session]
-        ##Below is the conversation history and new message from ai agent and query from user.##
-        {conversation_history}
-        New Message: {new_message}
-        {query_context}
 """
+
 
 async def run_summarize_agent_task(
     query: str = "",
@@ -297,56 +353,96 @@ async def run_summarize_agent_task(
         print("Summary Agent Output:", summary_result)
         print(summary_result.output)
         
-        # Fix:
+        # Fix: Handle different output types
         if hasattr(summary_result.output, 'summary'):
             SESSION_SUMMARY_HISTORY = summary_result.output.summary
         elif hasattr(summary_result.output, 'output'):
             SESSION_SUMMARY_HISTORY = summary_result.output.output
         else:
-            # Fallback: convert to JSON string
-            SESSION_SUMMARY_HISTORY = summary_result.output.model_dump_json()
+            # Fallback: convert to string
+            SESSION_SUMMARY_HISTORY = str(summary_result.output)
         
-        print("Session summary updated:", SESSION_SUMMARY_HISTORY)#
+        print("Session summary updated:", SESSION_SUMMARY_HISTORY)
         
     except Exception as e:
         print(f"Error in summarize agent: {e}")
         import traceback
         traceback.print_exc()
         return 'Error summarizing conversation.'
+
+
 ## Unified Agent Run Function ##
 async def run_agent_task(
-    mode: Literal['rag','talk'],
+    mode: Literal['rag', 'talk'],
     query: str = "",
     topic: str = "",
     agent: Agent = agent
 ):
     global SESSION_SUMMARY_HISTORY
-    ## Run agent based on mode ##
-    if mode == 'rag':
-        result = await agent.run(
-            await rag_query_prompt(query_context=SESSION_SUMMARY_HISTORY+query),
-            deps=SupportDependencies,
-            output_type=AgentState,
-        )
-    elif mode == 'talk':
-        result = await agent.run(
-            await talk_prompt(query_context=SESSION_SUMMARY_HISTORY+query),
-            deps=SupportDependencies,
-            output_type=AgentState,
-        )
-    else:
-        raise ValueError(f"Invalid mode: {mode}") # This was the original issue's location
+    
+    try:
+        # Get browser script path
+        browser_script = get_browser_script_path()
+        
+        # Prepare toolsets - only add MCP if browser script is found
+        toolsets = []
+        
+        if browser_script:
+            from pydantic_ai.mcp import MCPServerStdio
+            
+            # Create MCP client for this request
+            mcp_client = MCPServerStdio(
+                command='node',
+                args=[browser_script],
+                timeout=60,
+                env=os.environ.copy()
+            )
+            toolsets.append(mcp_client)
+            print(f"MCP browser tools enabled with script: {browser_script}")
+        else:
+            print("WARNING: browser-mcp.js not found, browser tools disabled")
+        
+        # Run agent based on mode
+        if mode == 'rag':
+            result = await agent.run(
+                await rag_query_prompt(query_context=SESSION_SUMMARY_HISTORY + query),
+                deps=SupportDependencies,
+                output_type=AgentState,
+                toolsets=toolsets
+            )
+        elif mode == 'talk':
+            result = await agent.run(
+                await talk_prompt(query_context=SESSION_SUMMARY_HISTORY + query),
+                deps=SupportDependencies,
+                output_type=AgentState,
+                toolsets=toolsets
+            )
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
 
-    # Update session summary history in background
-    async def background_summarize():
-        try:
-            await run_summarize_agent_task(query=query, new_message=str(result.output))
-        except Exception as e:
-            print(f"ackground summarization failed: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    asyncio.create_task(background_summarize())    
-    
-    print("Agent output:", result.output)
-    return result.output.output or result.output.model_dump_json()
+        # Update session summary history in background
+        async def background_summarize():
+            try:
+                await run_summarize_agent_task(query=query, new_message=str(result.output))
+            except Exception as e:
+                print(f"Background summarization failed: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        asyncio.create_task(background_summarize())
+        
+        print("Agent output:", result.output)
+        
+        # Handle different output types from AgentState
+        if hasattr(result.output, 'output'):
+            return result.output.output
+        elif isinstance(result.output, str):
+            return result.output
+        else:
+            return str(result.output)
+            
+    except Exception as e:
+        print(f"Error in run_agent_task: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Error processing request: {str(e)}"
