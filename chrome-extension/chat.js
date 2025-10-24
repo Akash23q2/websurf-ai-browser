@@ -76,14 +76,14 @@ function scrollToBottom() {
   }
 }
 
-// Refresh chat and clear collection
+// Refresh chat and clear collection (now called by newChatBtn)
 async function refreshChat() {
-  const refreshBtn = document.getElementById('refreshChat');
-  const originalHTML = refreshBtn.innerHTML;
+  const newChatBtn = document.getElementById('newChatBtn');
+  const originalHTML = newChatBtn.innerHTML;
   
   // Show loading state
-  refreshBtn.classList.add('loading');
-  refreshBtn.disabled = true;
+  newChatBtn.classList.add('loading');
+  newChatBtn.disabled = true;
 
   try {
     const { accessToken } = await chrome.storage.local.get(['accessToken']);
@@ -134,9 +134,9 @@ async function refreshChat() {
     addMessage('Failed to refresh chat: ' + error.message, 'bot', true);
   } finally {
     // Restore button state
-    refreshBtn.classList.remove('loading');
-    refreshBtn.disabled = false;
-    refreshBtn.innerHTML = originalHTML;
+    newChatBtn.classList.remove('loading');
+    newChatBtn.disabled = false;
+    newChatBtn.innerHTML = originalHTML;
   }
 }
 
@@ -154,10 +154,10 @@ function initChat() {
   const chatMessages = document.getElementById('chatMessages');
   const agentMode = document.getElementById('agentMode');
 
-  // Add refresh button event listener
-  const refreshBtn = document.getElementById('refreshChat');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', refreshChat);
+  // Add new chat button event listener
+  const newChatBtn = document.getElementById('newChatBtn');
+  if (newChatBtn) {
+    newChatBtn.addEventListener('click', refreshChat);
   }
 
   if (!chatInput || !sendBtn) return; // Not on chat page

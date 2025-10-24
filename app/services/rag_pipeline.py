@@ -157,6 +157,7 @@ class RagPipeline:
         #     print("-"*30)
         return results 
         
-    def delete_data(collection_name,db_path):
-        client = chromadb.PersistentClient(path=db_path)
-        client.delete_collection(name=collection_name)
+    def delete_data(self,collection_name:str,db_path=None):
+        if db_path:
+            self.client = chromadb.PersistentClient(path=db_path)
+        self.client.delete_collection(name=collection_name)

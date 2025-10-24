@@ -18,17 +18,43 @@ const server = new Server(
   }
 );
 
-// Launch browser with visible window
-const browser = await chromium.launch({
-  headless: false,
-  executablePath: "C:\\Users\\being\\AppData\\Local\\ms-playwright\\chromium-1187\\chrome-win\\chrome.exe",
-  args: [
-    '--start-maximized',
-    '--disable-blink-features=AutomationControlled'
-  ]
-});
+// Global browser instance
+let browser = null;
+let defaultContext = null;
+let defaultPage = null;
 
-console.error("Browser launched successfully in headed mode");
+// Initialize browser on first use
+async function ensureBrowser() {
+  if (!browser) {
+    browser = await chromium.launch({
+      headless: false,
+      executablePath: "C:\\Users\\being\\AppData\\Local\\ms-playwright\\chromium-1187\\chrome-win\\chrome.exe",
+      args: [
+        '--start-maximized',
+        '--disable-blink-features=AutomationControlled'
+      ]
+    });
+    console.error("Browser launched successfully in headed mode");
+  }
+  return browser;
+}
+
+// Get or create default context and page
+async function getDefaultPage() {
+  await ensureBrowser();
+  
+  if (!defaultContext) {
+    defaultContext = await browser.newContext();
+    console.error("Created default browser context");
+  }
+  
+  if (!defaultPage || defaultPage.isClosed()) {
+    defaultPage = await defaultContext.newPage();
+    console.error("Created default page");
+  }
+  
+  return defaultPage;
+}
 
 const contexts = new Map();
 
@@ -38,11 +64,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "openPage",
-        description: "Open a new page with the given URL",
+        description: "Open a new page with the given URL. If no pageId is provided, uses the default page.",
         inputSchema: {
           type: "object",
           properties: {
             url: { type: "string", description: "URL to open" },
+            useNewPage: { type: "boolean", description: "Create new page instead of reusing default", default: false },
           },
           required: ["url"],
         },
@@ -53,9 +80,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
           },
-          required: ["pageId"],
         },
       },
       {
@@ -64,9 +90,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
           },
-          required: ["pageId"],
         },
       },
       {
@@ -75,10 +100,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
           },
-          required: ["pageId", "selector"],
+          required: ["selector"],
         },
       },
       {
@@ -87,11 +112,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
             text: { type: "string", description: "Text to type" },
           },
-          required: ["pageId", "selector", "text"],
+          required: ["selector", "text"],
         },
       },
       {
@@ -100,10 +125,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
           },
-          required: ["pageId", "selector"],
+          required: ["selector"],
         },
       },
       {
@@ -112,9 +137,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
           },
-          required: ["pageId"],
         },
       },
       {
@@ -123,11 +147,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
             timeout: { type: "number", description: "Timeout in ms", default: 5000 },
           },
-          required: ["pageId", "selector"],
+          required: ["selector"],
         },
       },
       {
@@ -136,9 +160,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
           },
-          required: ["pageId"],
         },
       },
       {
@@ -147,14 +170,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
           },
-          required: ["pageId"],
         },
       },
       {
         name: "closePage",
-        description: "Close a page",
+        description: "Close a specific page (not the default page)",
         inputSchema: {
           type: "object",
           properties: {
@@ -177,11 +199,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             x: { type: "number", description: "Horizontal scroll amount", default: 0 },
             y: { type: "number", description: "Vertical scroll amount", default: 1000 },
           },
-          required: ["pageId"],
         },
       },
       {
@@ -190,10 +211,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
           },
-          required: ["pageId", "selector"],
+          required: ["selector"],
         },
       },
       {
@@ -202,11 +223,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
             attribute: { type: "string", description: "Attribute name" },
           },
-          required: ["pageId", "selector", "attribute"],
+          required: ["selector", "attribute"],
         },
       },
       {
@@ -215,10 +236,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
           },
-          required: ["pageId", "selector"],
+          required: ["selector"],
         },
       },
       {
@@ -227,10 +248,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
           },
-          required: ["pageId", "selector"],
+          required: ["selector"],
         },
       },
       {
@@ -239,11 +260,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
             value: { type: "string", description: "Option value" },
           },
-          required: ["pageId", "selector", "value"],
+          required: ["selector", "value"],
         },
       },
       {
@@ -252,10 +273,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
           },
-          required: ["pageId", "selector"],
+          required: ["selector"],
         },
       },
       {
@@ -264,15 +285,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            pageId: { type: "string", description: "Page ID" },
+            pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
           },
-          required: ["pageId", "selector"],
+          required: ["selector"],
         },
       },
     ],
   };
 });
+
+// Helper to get page by ID or default
+async function getPage(pageId) {
+  if (!pageId) {
+    return await getDefaultPage();
+  }
+  const ctx = contexts.get(pageId);
+  if (!ctx) throw new Error("Page not found");
+  return ctx.page;
+}
 
 // Register tool call handler
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -281,19 +312,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case "openPage": {
-        const context = await browser.newContext();
-        const page = await context.newPage();
-        await page.goto(args.url);
-        const pageId = Date.now().toString();
-        contexts.set(pageId, { context, page });
-        return {
-          content: [{ type: "text", text: JSON.stringify({ pageId, message: `Opened ${args.url}` }) }],
-        };
+        if (args.useNewPage) {
+          // Create new context and page
+          await ensureBrowser();
+          const context = await browser.newContext();
+          const page = await context.newPage();
+          await page.goto(args.url);
+          const pageId = Date.now().toString();
+          contexts.set(pageId, { context, page });
+          return {
+            content: [{ type: "text", text: JSON.stringify({ pageId, message: `Opened ${args.url} in new page` }) }],
+          };
+        } else {
+          // Use default page
+          const page = await getDefaultPage();
+          await page.goto(args.url);
+          return {
+            content: [{ type: "text", text: JSON.stringify({ pageId: "default", message: `Opened ${args.url} in default page` }) }],
+          };
+        }
       }
 
       case "getTitle": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         const title = await page.title();
         return {
           content: [{ type: "text", text: JSON.stringify({ title }) }],
@@ -301,16 +342,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "getURL": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         return {
           content: [{ type: "text", text: JSON.stringify({ url: page.url() }) }],
         };
       }
 
       case "clickElement": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.click(args.selector);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `Clicked ${args.selector}` }) }],
@@ -318,8 +357,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "typeText": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.fill(args.selector, args.text);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `Typed text into ${args.selector}` }) }],
@@ -327,8 +365,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "extractText": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         const text = await page.textContent(args.selector);
         return {
           content: [{ type: "text", text: JSON.stringify({ text }) }],
@@ -336,9 +373,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "screenshot": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
-        const path = `screenshot_${args.pageId}_${Date.now()}.png`;
+        const page = await getPage(args.pageId);
+        const path = `screenshot_${args.pageId || 'default'}_${Date.now()}.png`;
         await page.screenshot({ path });
         return {
           content: [{ type: "text", text: JSON.stringify({ screenshotPath: path }) }],
@@ -346,8 +382,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "waitForSelector": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.waitForSelector(args.selector, { timeout: args.timeout || 5000 });
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `Selector ${args.selector} appeared` }) }],
@@ -355,8 +390,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "goBack": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.goBack();
         return {
           content: [{ type: "text", text: JSON.stringify({ message: "Went back" }) }],
@@ -364,8 +398,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "goForward": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.goForward();
         return {
           content: [{ type: "text", text: JSON.stringify({ message: "Went forward" }) }],
@@ -373,6 +406,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "closePage": {
+        if (!args.pageId || args.pageId === "default") {
+          return {
+            content: [{ type: "text", text: JSON.stringify({ error: "Cannot close default page" }) }],
+            isError: true,
+          };
+        }
         const ctx = contexts.get(args.pageId);
         if (!ctx) throw new Error("Page not found");
         await ctx.page.close();
@@ -384,14 +423,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "listPages": {
+        const pages = ["default", ...Array.from(contexts.keys())];
         return {
-          content: [{ type: "text", text: JSON.stringify({ pages: Array.from(contexts.keys()) }) }],
+          content: [{ type: "text", text: JSON.stringify({ pages }) }],
         };
       }
 
       case "scrollPage": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         const x = args.x || 0;
         const y = args.y || 1000;
         await page.evaluate(([scrollX, scrollY]) => window.scrollBy(scrollX, scrollY), [x, y]);
@@ -401,8 +440,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "hoverElement": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.hover(args.selector);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `Hovered over ${args.selector}` }) }],
@@ -410,8 +448,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "getAttribute": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         const value = await page.getAttribute(args.selector, args.attribute);
         return {
           content: [{ type: "text", text: JSON.stringify({ value }) }],
@@ -419,8 +456,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "checkCheckbox": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.check(args.selector);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `Checked ${args.selector}` }) }],
@@ -428,8 +464,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "uncheckCheckbox": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.uncheck(args.selector);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `Unchecked ${args.selector}` }) }],
@@ -437,8 +472,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "selectOption": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         await page.selectOption(args.selector, args.value);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `Selected ${args.value} in ${args.selector}` }) }],
@@ -446,8 +480,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "getInnerHTML": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         const html = await page.innerHTML(args.selector);
         return {
           content: [{ type: "text", text: JSON.stringify({ html }) }],
@@ -455,8 +488,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "getOuterHTML": {
-        const { page } = contexts.get(args.pageId) || {};
-        if (!page) throw new Error("Page not found");
+        const page = await getPage(args.pageId);
         const element = await page.$(args.selector);
         const html = await page.evaluate(el => el.outerHTML, element);
         return {
@@ -481,20 +513,35 @@ await server.connect(transport);
 
 console.error("MCP Browser Server running on stdio");
 
-setInterval(() => {}, 1 << 30); //prevent exit
+setInterval(() => {}, 1 << 30); // prevent exit
 
-// Keep the process alive and handle cleanup
+// Cleanup handlers - don't close browser, just cleanup contexts
 process.on('SIGINT', async () => {
-  console.error('Received SIGINT, closing browser...');
-//  await browser.close();
+  console.error('Received SIGINT, cleaning up contexts...');
+  for (const [pageId, ctx] of contexts) {
+    try {
+      await ctx.page.close();
+      await ctx.context.close();
+    } catch (e) {
+      console.error(`Error closing context ${pageId}:`, e);
+    }
+  }
+  // Keep browser open for reuse
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.error('Received SIGTERM, closing browser...');
-//  await browser.close();
+  console.error('Received SIGTERM, cleaning up contexts...');
+  for (const [pageId, ctx] of contexts) {
+    try {
+      await ctx.page.close();
+      await ctx.context.close();
+    } catch (e) {
+      console.error(`Error closing context ${pageId}:`, e);
+    }
+  }
+  // Keep browser open for reuse
   process.exit(0);
 });
 
-// Keep process alive
 process.stdin.resume();

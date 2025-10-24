@@ -4,9 +4,10 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import logging
 from app.services.rag_pipeline import RagPipeline
-from app.services.rag_service import data_injestion,query_engine
+from app.services.rag_service import data_injestion,query_engine,delete_data,avilable_collections
+import os
 from app.schemas.response_schema import AddDocumentResponse, SearchRequest, SearchResponse, Document
-
+ ##reset the present embeddings info
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -83,4 +84,25 @@ async def search_documents(request: SearchRequest):
 
     except Exception as e:
         logger.error(f"Search error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@rag_router.post("/api/rag/remove_collection/{collection_name}")
+async def remove_collection(collection_name: str):
+    """
+    Remove a collection.
+    """
+    try:
+        if not collection_name:
+            raise HTTPException(status_code=400, detail="Collection name must be provided.")
+        logger.info(f"Removing collection: {collection_name}")
+        ##for now we are deleting entire rag_history along with it uncomment below if you want selective
+        for collection_name in avilable_collections.keys():
+            await delete_data(collection_name=collection_name)
+        
+        avilable_collections = {}
+
+        # await delete_data(collection_name=collection_name)
+        return {"message": f"Collection '{collection_name}' removed successfully."}
+    except Exception as e:
+        logger.error(f"Failed to remove collection: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

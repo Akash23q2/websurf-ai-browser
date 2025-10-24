@@ -371,6 +371,51 @@ async def run_summarize_agent_task(
         return 'Error summarizing conversation.'
 
 
+## Atomic MCP Client Singleton ##
+_mcp_client_instance = None
+_mcp_client_lock = asyncio.Lock()
+
+async def get_or_create_mcp_client():
+    """Singleton MCP client to keep browser alive across requests"""
+    global _mcp_client_instance
+    
+    async with _mcp_client_lock:
+        if _mcp_client_instance is None:
+            browser_script = get_browser_script_path()
+            if browser_script:
+                from pydantic_ai.mcp import MCPServerStdio
+                
+                _mcp_client_instance = MCPServerStdio(
+                    command='node',
+                    args=[browser_script],
+                    timeout=60,
+                    env=os.environ.copy()
+                )
+                
+                # Initialize the connection (this starts the browser)
+                await _mcp_client_instance.__aenter__()
+                print(f"MCP browser client initialized with script: {browser_script}")
+            else:
+                print("WARNING: browser-mcp.js not found, browser tools disabled")
+        
+        return _mcp_client_instance
+
+
+async def cleanup_mcp_client():
+    """Cleanup function to call on app shutdown"""
+    global _mcp_client_instance
+    
+    async with _mcp_client_lock:
+        if _mcp_client_instance is not None:
+            try:
+                await _mcp_client_instance.__aexit__(None, None, None)
+                print("MCP client connection closed")
+            except Exception as e:
+                print(f"Error closing MCP client: {e}")
+            finally:
+                _mcp_client_instance = None
+
+
 ## Unified Agent Run Function ##
 async def run_agent_task(
     mode: Literal['rag', 'talk'],
@@ -381,26 +426,14 @@ async def run_agent_task(
     global SESSION_SUMMARY_HISTORY
     
     try:
-        # Get browser script path
-        browser_script = get_browser_script_path()
+        # Get or create persistent MCP client (singleton)
+        mcp_client = await get_or_create_mcp_client()
         
-        # Prepare toolsets - only add MCP if browser script is found
+        # Prepare toolsets
         toolsets = []
-        
-        if browser_script:
-            from pydantic_ai.mcp import MCPServerStdio
-            
-            # Create MCP client for this request
-            mcp_client = MCPServerStdio(
-                command='node',
-                args=[browser_script],
-                timeout=60,
-                env=os.environ.copy()
-            )
+        if mcp_client:
             toolsets.append(mcp_client)
-            print(f"MCP browser tools enabled with script: {browser_script}")
-        else:
-            print("WARNING: browser-mcp.js not found, browser tools disabled")
+            print("Using persistent MCP browser client")
         
         # Run agent based on mode
         if mode == 'rag':

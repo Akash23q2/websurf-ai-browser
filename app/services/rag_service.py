@@ -78,5 +78,5 @@ async def _clean_documents_result(result_dict: dict) -> list[str]:
     return docs
 
     
-async def delete_data(rag_model,collection_name,db_path):
+async def delete_data(collection_name,db_path=None):
         rag_model.delete_data(collection_name=collection_name,db_path=db_path)
