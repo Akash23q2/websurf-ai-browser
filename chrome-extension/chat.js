@@ -65,6 +65,81 @@ function parseMarkdown(text) {
   return html;
 }
 
+// Auto-scroll to bottom function
+function scrollToBottom() {
+  const chatMessages = document.getElementById('chatMessages');
+  if (chatMessages) {
+    chatMessages.scrollTo({
+      top: chatMessages.scrollHeight,
+      behavior: 'smooth'
+    });
+  }
+}
+
+// Refresh chat and clear collection
+async function refreshChat() {
+  const refreshBtn = document.getElementById('refreshChat');
+  const originalHTML = refreshBtn.innerHTML;
+  
+  // Show loading state
+  refreshBtn.classList.add('loading');
+  refreshBtn.disabled = true;
+
+  try {
+    const { accessToken } = await chrome.storage.local.get(['accessToken']);
+    
+    if (!accessToken) {
+      throw new Error('Not authenticated');
+    }
+
+    // Clear the RAG collection
+    const response = await fetch(`${CONFIG.BACKEND_URL}/api/rag/remove_collection/current_session`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to clear collection');
+    }
+
+    // Clear chat messages
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.innerHTML = '';
+
+    // Restore welcome message
+    const welcomeMsg = document.createElement('div');
+    welcomeMsg.className = 'welcome-message';
+    welcomeMsg.innerHTML = `
+      <div class="welcome-icon">✨</div>
+      <h3>Chat Refreshed!</h3>
+      <p>Collection cleared and ready for new conversations</p>
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+        <span style="padding: 6px 12px; background: linear-gradient(135deg, rgba(232, 185, 35, 0.1), rgba(232, 185, 35, 0.05)); border-radius: 8px; font-size: 11px; border: 1px solid rgba(232, 185, 35, 0.2);">🏄 Fresh Start</span>
+        <span style="padding: 6px 12px; background: linear-gradient(135deg, rgba(210, 105, 30, 0.1), rgba(210, 105, 30, 0.05)); border-radius: 8px; font-size: 11px; border: 1px solid rgba(210, 105, 30, 0.2);">📄 Clean Slate</span>
+      </div>
+    `;
+    chatMessages.appendChild(welcomeMsg);
+
+    // Clear any current attachment
+    clearAttachment();
+
+    // Show success message
+    addMessage('Chat refreshed and collection cleared successfully!', 'bot');
+    
+  } catch (error) {
+    console.error('Refresh error:', error);
+    addMessage('Failed to refresh chat: ' + error.message, 'bot', true);
+  } finally {
+    // Restore button state
+    refreshBtn.classList.remove('loading');
+    refreshBtn.disabled = false;
+    refreshBtn.innerHTML = originalHTML;
+  }
+}
+
 // Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', initChat);
 
@@ -78,6 +153,12 @@ function initChat() {
   const fileInput = document.getElementById('fileInput');
   const chatMessages = document.getElementById('chatMessages');
   const agentMode = document.getElementById('agentMode');
+
+  // Add refresh button event listener
+  const refreshBtn = document.getElementById('refreshChat');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', refreshChat);
+  }
 
   if (!chatInput || !sendBtn) return; // Not on chat page
 
@@ -450,11 +531,8 @@ function addMessage(text, sender, isError = false) {
     messageDiv.style.transform = 'translateY(0)';
   });
 
-  // Smooth scroll to bottom
-  chatMessages.scrollTo({
-    top: chatMessages.scrollHeight,
-    behavior: 'smooth'
-  });
+  // Auto-scroll to bottom after a brief delay to allow rendering
+  setTimeout(scrollToBottom, 100);
 }
 
 // Show typing indicator with dynamic text
@@ -481,7 +559,8 @@ function showTypingIndicator() {
   messageDiv.appendChild(content);
   chatMessages.appendChild(messageDiv);
 
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  // Auto-scroll when typing indicator appears
+  scrollToBottom();
 
   // Rotate through different phrases
   const phrases = ['typing...', 'thinking...', 'wondering...', 'guessing...', 'evaluating...', 'processing...', 'analyzing...', 'surfing...'];
@@ -506,6 +585,9 @@ function showTypingIndicator() {
 function removeTypingIndicator(id) {
   const indicator = document.getElementById(id);
   if (indicator) {
+    if (indicator.dataset.intervalId) {
+      clearInterval(parseInt(indicator.dataset.intervalId));
+    }
     indicator.remove();
   }
 }

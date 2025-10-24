@@ -1,0 +1,57 @@
+/* acrylic-inspired UI, minimal but pretty */
+:root {
+  --bg: rgba(255,255,255,0.06);
+  --glass: rgba(255,255,255,0.06);
+  --accent: linear-gradient(135deg,#6DD3FF 0%, #7F6BFF 100%);
+  --card: rgba(255,255,255,0.03);
+  --muted: rgba(255,255,255,0.6);
+  --radius: 12px;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* page */
+body, html { height:100%; margin:0; background:linear-gradient(180deg,#0f1724, #071025); color:#e6eef8; }
+.app-acrylic { height:100vh; display:flex; flex-direction:column; backdrop-filter: blur(10px) saturate(120%); padding:10px; box-sizing:border-box; }
+
+/* header */
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:8px; }
+.brand { display:flex; align-items:center; gap:8px; }
+.logo { width:36px; height:36px; border-radius:8px; }
+.title { font-weight:600; font-size:16px; letter-spacing:0.4px; }
+.top-controls { display:flex; gap:8px; align-items:center; }
+.top-controls button, .profile { background:transparent; border:1px solid rgba(255,255,255,0.06); padding:6px; border-radius:8px; cursor:pointer; }
+
+/* main layout */
+.main { display:flex; gap:10px; height:calc(100% - 64px); }
+.history { width:220px; background:var(--card); border-radius:10px; overflow:auto; padding:8px; box-shadow:0 4px 14px rgba(0,0,0,0.5); }
+.history-header { font-size:13px; opacity:0.9; margin-bottom:8px; }
+#history-list .history-item { padding:8px; border-radius:8px; cursor:pointer; margin-bottom:6px; background:transparent; }
+#history-list .history-item:hover { background:rgba(255,255,255,0.03); }
+
+/* chat */
+.chat-area { flex:1; display:flex; flex-direction:column; gap:8px; }
+.messages { flex:1; overflow:auto; padding:10px; border-radius:10px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02)); }
+.message { margin-bottom:10px; }
+.message .meta { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px; }
+.message .content { white-space:pre-wrap; background:rgba(255,255,255,0.02); padding:12px; border-radius:8px; }
+
+/* composer */
+.composer { display:flex; gap:8px; align-items:center; padding:8px; background:transparent; }
+.composer input, .composer textarea, .composer select { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.04); color:inherit; padding:8px; border-radius:8px; outline:none; }
+.composer #input{ flex:1; min-width:0; }
+.attach { width:40px; height:40px; border-radius:10px; }
+
+/* typing */
+.typing { min-height:22px; color:var(--muted); padding:4px 10px; font-style:italic; }
+
+/* modals & profile menu */
+.menu, .modal { position:fixed; z-index:2000; }
+.menu { right:18px; top:64px; background:var(--card); padding:10px; border-radius:10px; width:220px; box-shadow:0 10px 30px rgba(0,0,0,0.6); }
+.hidden { display:none; }
+.modal { left:50%; top:50%; transform:translate(-50%,-50%); }
+.modal-card { background:rgba(10,15,22,0.95); padding:12px; border-radius:12px; width:420px; max-width:92vw; box-shadow:0 12px 30px rgba(0,0,0,0.6);}
+.modal-card h3 { margin:0 0 8px 0; }
+.modal-card label { display:block; margin-bottom:8px; font-size:13px; }
+.modal-card textarea { width:100%; min-height:120px; resize:vertical; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
+.copy-btn { background:transparent; border:none; color:var(--muted); cursor:pointer; }

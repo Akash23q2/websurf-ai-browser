@@ -1,0 +1,7 @@
+body { background:#061021; color:#eaf3ff; font-family:Inter, system-ui; padding:18px; }
+.opts { max-width:640px; margin:0 auto; }
+label { display:block; margin-bottom:12px; }
+input { padding:8px; width:100%; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); color:inherit; }
+.actions { display:flex; gap:8px; margin-top:8px; }
+button { padding:8px 12px; border-radius:8px; border: none; cursor:pointer;}
+.status { margin-top:8px; opacity:0.9; }

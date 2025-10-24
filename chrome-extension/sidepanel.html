@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>websurf-ai</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <div id="app" class="app-acrylic">
+    <header class="topbar">
+      <div class="brand">
+        <img src="logo.svg" class="logo" alt="logo" />
+        <div class="title">websurf-ai</div>
+      </div>
+      <div class="top-controls">
+        <button id="new-chat" title="New chat">⎌</button>
+        <div class="profile" id="profile-btn" title="Profile">☰</div>
+      </div>
+    </header>
+
+    <main class="main">
+      <aside class="history" id="history">
+        <div class="history-header">Conversations</div>
+        <div id="history-list"></div>
+      </aside>
+
+      <section class="chat-area">
+        <div id="messages" class="messages"></div>
+        <div id="typing-indicator" class="typing"></div>
+
+        <div class="composer">
+          <button id="attach-btn" class="attach" title="Attach @">@</button>
+          <input id="input" placeholder="Ask websurf-ai..." />
+          <select id="mode-select" title="Mode">
+            <option value="auto">Auto</option>
+            <option value="rag">RAG</option>
+            <option value="talk">TALK</option>
+          </select>
+          <button id="send">Send</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="profile-menu" class="menu hidden">
+      <div id="user-info">
+        <div id="username">—</div>
+        <div id="email" class="sub">—</div>
+      </div>
+      <hr/>
+      <button id="update-profile">Update profile</button>
+      <button id="logout">Logout</button>
+      <button id="open-options">Settings</button>
+    </div>
+
+    <!-- attach modal -->
+    <div id="attach-modal" class="modal hidden">
+      <div class="modal-card">
+        <h3>Attach Document or Text</h3>
+        <div class="attach-options">
+          <label>
+            PDF file
+            <input id="file-input" type="file" accept="application/pdf" />
+          </label>
+          <label>
+            PDF URL
+            <input id="pdf-url" placeholder="https://example.com/doc.pdf" />
+          </label>
+          <label>
+            Paste big text
+            <textarea id="big-text" placeholder="Paste text..."></textarea>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button id="attach-upload">Upload & Use</button>
+          <button id="attach-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <template id="message-template">
+      <div class="message">
+        <div class="meta">
+          <span class="role"></span>
+          <button class="copy-btn" title="Copy">Copy</button>
+        </div>
+        <div class="content"></div>
+      </div>
+    </template>
+
+  </div>
+
+  <script src="utils.js" type="module"></script>
+  <script src="sidepanel.js" type="module"></script>
+</body>
+</html>

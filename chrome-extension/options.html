@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>websurf-ai settings</title>
+<link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="opts">
+    <h2>websurf-ai settings</h2>
+    <label>Backend Host
+      <input id="backend-host" placeholder="http://localhost:8000" />
+    </label>
+    <div class="auth">
+      <h3>Authentication</h3>
+      <label>Username <input id="username" /></label>
+      <label>Password <input id="password" type="password" /></label>
+      <div class="actions">
+        <button id="signup">Signup</button>
+        <button id="login">Login</button>
+        <button id="logout">Logout</button>
+      </div>
+      <div id="auth-status" class="status"></div>
+    </div>
+    <div class="misc">
+      <button id="clear-history">Clear chat history</button>
+    </div>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
