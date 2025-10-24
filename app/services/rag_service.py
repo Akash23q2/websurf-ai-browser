@@ -80,3 +80,9 @@ async def _clean_documents_result(result_dict: dict) -> list[str]:
     
 async def delete_data(collection_name,db_path=None):
         rag_model.delete_data(collection_name=collection_name,db_path=db_path)
+        
+async def clear_collections():
+    global avilable_collections
+    for collection_name in avilable_collections.keys():
+        await delete_data(collection_name=collection_name)
+    avilable_collections = {}   

@@ -185,6 +185,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: float 4s ease-in-out infinite;
+
 }
 
 .logo-text {

@@ -5,6 +5,16 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from "playwright";
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const server = new Server(
   {
@@ -23,34 +33,114 @@ let browser = null;
 let defaultContext = null;
 let defaultPage = null;
 
-// Initialize browser on first use
+// Define persistent profile path
+const PROFILE_PATH = "C:\\websurf-browser"; //change for yourself
+
+// Define extension path (absolute)
+const EXTENSION_PATH = "C:\\Users\\being\\OneDrive - Madan Mohan Malaviya University of Technology\\Documents\\SIHO WORKS\\websurf-ai\\chrome-extension";
+
+// Or use relative path from current directory
+// const EXTENSION_PATH = path.join(__dirname, "chrome-extension");
+
+// Default starting URL
+const DEFAULT_URL = "https://websurf-ai.vercel.app/";
+
+// Get browser executable path from environment variable or use default
+const BROWSER_EXE_PATH = process.env.BROWSER_EXE_PATH || "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+
+// Initialize browser on first use with persistent profile
 async function ensureBrowser() {
   if (!browser) {
-    browser = await chromium.launch({
+    browser = await chromium.launchPersistentContext(PROFILE_PATH, {
       headless: false,
-      executablePath: "C:\\Users\\being\\AppData\\Local\\ms-playwright\\chromium-1187\\chrome-win\\chrome.exe",
+      executablePath: BROWSER_EXE_PATH,
       args: [
         '--start-maximized',
-        '--disable-blink-features=AutomationControlled'
-      ]
+        '--disable-blink-features=AutomationControlled',
+        `--disable-extensions-except=${EXTENSION_PATH}`,
+        `--load-extension=${EXTENSION_PATH}`,
+        `--homepage=${DEFAULT_URL}` // Set homepage to default URL
+      ],
+      // Additional settings for persistent context
+      viewport: null, // Use full screen
+      acceptDownloads: true,
+      // You can add more options like:
+      // locale: 'en-US',
+      // timezoneId: 'America/New_York',
     });
-    console.error("Browser launched successfully in headed mode");
+    console.error(`Browser launched with persistent profile at: ${PROFILE_PATH}`);
+    console.error(`Extension loaded from: ${EXTENSION_PATH}`);
+    
+    // The persistent context automatically creates pages, get the first one
+    const pages = browser.pages();
+    if (pages.length > 0) {
+      defaultPage = pages[0];
+      console.error("Using existing page from persistent context");
+      
+      // Check if page is on about:blank and navigate to default URL
+      if (defaultPage.url() === 'about:blank' || defaultPage.url() === '') {
+        try {
+          await defaultPage.goto(DEFAULT_URL, { waitUntil: 'domcontentloaded' });
+          console.error(`Navigated to default URL: ${DEFAULT_URL}`);
+        } catch (err) {
+          console.error(`Failed to navigate to ${DEFAULT_URL}:`, err);
+        }
+      }
+    } else {
+      defaultPage = await browser.newPage();
+      console.error("Created new default page");
+      try {
+        await defaultPage.goto(DEFAULT_URL, { waitUntil: 'domcontentloaded' });
+        console.error(`Navigated to default URL: ${DEFAULT_URL}`);
+      } catch (err) {
+        console.error(`Failed to navigate to ${DEFAULT_URL}:`, err);
+      }
+    }
+    
+    // Remove focus from address bar by clicking on the page content
+    try {
+      await defaultPage.waitForTimeout(1500); // Wait longer for page to fully settle
+      await defaultPage.evaluate(() => {
+        // Blur active element (address bar)
+        if (document.activeElement && document.activeElement.tagName !== 'BODY') {
+          document.activeElement.blur();
+        }
+        // Remove any text selection
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        }
+        // Focus on document body
+        document.body.focus();
+        // Dispatch a click event on body
+        document.body.dispatchEvent(new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          view: window
+        }));
+      });
+      
+      // Physical click on the page
+      try {
+        await defaultPage.mouse.click(100, 200); // Click somewhere in the page content area
+      } catch (e) {
+        // Ignore click errors
+      }
+      
+      console.error("Removed address bar focus");
+    } catch (err) {
+      console.error("Failed to remove address bar focus:", err);
+    }
   }
   return browser;
 }
 
-// Get or create default context and page
+// Get or create default page
 async function getDefaultPage() {
   await ensureBrowser();
   
-  if (!defaultContext) {
-    defaultContext = await browser.newContext();
-    console.error("Created default browser context");
-  }
-  
   if (!defaultPage || defaultPage.isClosed()) {
-    defaultPage = await defaultContext.newPage();
-    console.error("Created default page");
+    defaultPage = await browser.newPage();
+    console.error("Created new default page");
   }
   
   return defaultPage;
@@ -300,9 +390,9 @@ async function getPage(pageId) {
   if (!pageId) {
     return await getDefaultPage();
   }
-  const ctx = contexts.get(pageId);
-  if (!ctx) throw new Error("Page not found");
-  return ctx.page;
+  const page = contexts.get(pageId);
+  if (!page) throw new Error("Page not found");
+  return page;
 }
 
 // Register tool call handler
@@ -313,13 +403,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case "openPage": {
         if (args.useNewPage) {
-          // Create new context and page
+          // Create new page in persistent context
           await ensureBrowser();
-          const context = await browser.newContext();
-          const page = await context.newPage();
+          const page = await browser.newPage();
           await page.goto(args.url);
           const pageId = Date.now().toString();
-          contexts.set(pageId, { context, page });
+          contexts.set(pageId, page);
           return {
             content: [{ type: "text", text: JSON.stringify({ pageId, message: `Opened ${args.url} in new page` }) }],
           };
@@ -412,10 +501,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             isError: true,
           };
         }
-        const ctx = contexts.get(args.pageId);
-        if (!ctx) throw new Error("Page not found");
-        await ctx.page.close();
-        await ctx.context.close();
+        const page = contexts.get(args.pageId);
+        if (!page) throw new Error("Page not found");
+        await page.close();
         contexts.delete(args.pageId);
         return {
           content: [{ type: "text", text: JSON.stringify({ message: `Closed page ${args.pageId}` }) }],
@@ -509,38 +597,80 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start the server
 const transport = new StdioServerTransport();
+
+// Launch browser immediately when script starts
+(async () => {
+  try {
+    await ensureBrowser(); // 🚀 Launch browser with extension and navigate to default URL
+    
+    // Additional focus removal after browser is fully loaded
+    const page = await getDefaultPage();
+    await page.waitForTimeout(1000); // Wait a bit longer for full page load
+    
+    // Click on page content multiple times to ensure focus is removed
+    await page.evaluate(() => {
+      // Remove focus from address bar
+      if (document.activeElement) {
+        document.activeElement.blur();
+      }
+      // Click on body
+      document.body.click();
+      // Remove any selection
+      if (window.getSelection) {
+        window.getSelection().removeAllRanges();
+      }
+      // Focus on body
+      document.body.focus();
+    });
+    
+    // Try clicking on a specific element if body click doesn't work
+    try {
+      await page.click('body', { force: true });
+    } catch (e) {
+      // Ignore if click fails
+    }
+    
+    console.error("Browser pre-launched successfully with extension loaded");
+  } catch (err) {
+    console.error("Failed to pre-launch browser:", err);
+  }
+})();
+
+
 await server.connect(transport);
 
-console.error("MCP Browser Server running on stdio");
+console.error("MCP Browser Server running on stdio with persistent profile");
+console.error(`Profile location: ${PROFILE_PATH}`);
+console.error(`Extension location: ${EXTENSION_PATH}`);
+console.error(`Default URL: ${DEFAULT_URL}`);
+console.error(`Browser executable: ${BROWSER_EXE_PATH}`);
 
 setInterval(() => {}, 1 << 30); // prevent exit
 
-// Cleanup handlers - don't close browser, just cleanup contexts
+// Cleanup handlers - gracefully close browser
 process.on('SIGINT', async () => {
-  console.error('Received SIGINT, cleaning up contexts...');
-  for (const [pageId, ctx] of contexts) {
+  console.error('Received SIGINT, closing browser gracefully...');
+  if (browser) {
     try {
-      await ctx.page.close();
-      await ctx.context.close();
+      await browser.close();
+      console.error('Browser closed successfully');
     } catch (e) {
-      console.error(`Error closing context ${pageId}:`, e);
+      console.error('Error closing browser:', e);
     }
   }
-  // Keep browser open for reuse
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.error('Received SIGTERM, cleaning up contexts...');
-  for (const [pageId, ctx] of contexts) {
+  console.error('Received SIGTERM, closing browser gracefully...');
+  if (browser) {
     try {
-      await ctx.page.close();
-      await ctx.context.close();
+      await browser.close();
+      console.error('Browser closed successfully');
     } catch (e) {
-      console.error(`Error closing context ${pageId}:`, e);
+      console.error('Error closing browser:', e);
     }
   }
-  // Keep browser open for reuse
   process.exit(0);
 });
 

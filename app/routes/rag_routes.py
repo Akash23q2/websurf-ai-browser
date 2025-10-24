@@ -4,9 +4,11 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import logging
 from app.services.rag_pipeline import RagPipeline
-from app.services.rag_service import data_injestion,query_engine,delete_data,avilable_collections
+from app.services.rag_service import data_injestion,query_engine,delete_data,clear_collections
 import os
 from app.schemas.response_schema import AddDocumentResponse, SearchRequest, SearchResponse, Document
+from app.services.agent_service import avilable_collections
+
  ##reset the present embeddings info
 
 logging.basicConfig(level=logging.INFO)
@@ -95,13 +97,10 @@ async def remove_collection(collection_name: str):
         if not collection_name:
             raise HTTPException(status_code=400, detail="Collection name must be provided.")
         logger.info(f"Removing collection: {collection_name}")
-        ##for now we are deleting entire rag_history along with it uncomment below if you want selective
-        for collection_name in avilable_collections.keys():
-            await delete_data(collection_name=collection_name)
-        
-        avilable_collections = {}
-
+        #for now we are deleting entire rag_history along with it uncomment below if you want selective
         # await delete_data(collection_name=collection_name)
+        await clear_collections()
+        
         return {"message": f"Collection '{collection_name}' removed successfully."}
     except Exception as e:
         logger.error(f"Failed to remove collection: {e}", exc_info=True)
