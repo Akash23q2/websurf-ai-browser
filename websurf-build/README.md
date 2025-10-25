@@ -20,29 +20,50 @@ WebSurf MCP is a browser automation server that:
 
 ### Prerequisites
 
-- **Node.js 18+** installed
-- npm package manager
+- **Node.js 18+** (auto-installed if not present)
+- npm package manager (comes with Node.js)
 - Windows, Linux, or macOS
 
 ### Quick Start
 
-#### Option 1: Run via Executable (Recommended)
+#### Option 1: Run via Launcher Scripts (Recommended)
 
-1. Download the latest release from `websurf-build/`
-2. Double-click `WebSurf.exe` (Windows) or run the executable
-3. Browser launches automatically with MCP server ready
+**Windows (PowerShell):**
+```powershell
+.\websurf-launcher.ps1
+```
 
-#### Option 2: Run via Node.js
+**Windows (Batch):**
+```batch
+websurf-launcher.bat
+```
+
+**Linux/macOS (Shell):**
+```bash
+chmod +x websurf-launcher.sh
+./websurf-launcher.sh
+```
+
+The launcher will:
+- Check for Node.js installation
+- Download portable Node.js if needed (one-time, ~30MB)
+- Create a desktop shortcut
+- Install dependencies automatically
+- Download Chromium browser if needed
+- Launch the MCP server with browser
+
+#### Option 2: Run via Node.js Directly
 
 ```bash
 cd websurf-build
 node main-launcher.js
 ```
 
-The launcher will:
-- Check and install dependencies automatically
-- Download Chromium browser if needed
-- Launch the MCP server with browser
+#### Option 3: Use Desktop Shortcut
+
+After first launch, double-click the generated shortcut:
+- **Windows:** `WebSurf.lnk`
+- **Linux:** Application menu entry (Desktop Environment)
 
 ***
 
@@ -52,8 +73,12 @@ The launcher will:
 websurf-ai/
 ├── websurf-build/           # Build and launcher scripts
 │   ├── main-launcher.js     # Main entry point
+│   ├── websurf-launcher.ps1 # PowerShell launcher (Windows)
+│   ├── websurf-launcher.bat # Batch launcher (Windows)
+│   ├── websurf-launcher.sh  # Shell launcher (Linux/macOS)
 │   ├── build-script.ps1     # Windows build script
 │   ├── websurf.ico          # Application icon
+│   ├── .node-portable/      # Portable Node.js (auto-downloaded)
 │   └── electron-app/        # Desktop client (see folder for details)
 ├── websurf-mcp/             # MCP server code
 │   ├── browser-mcp.js       # Main MCP server
@@ -64,13 +89,13 @@ websurf-ai/
 
 ***
 
-##  How to Use
+## 🎯 How to Use
 
 ### Browser-Based Access
 
 WebSurf provides a **web frontend** for easy interaction:
 
-1. Launch WebSurf MCP (via executable or `main-launcher.js`)
+1. Launch WebSurf MCP (via launcher script or `main-launcher.js`)
 2. Open the frontend in your browser
 3. Use the browser agent while browsing normally
 4. The **Chrome extension** provides additional controls directly in-browser
@@ -136,14 +161,6 @@ executablePath: path.resolve(__dirname, "../websurf-build/chromium/chrome.exe")
 
 Change to your preferred Chromium-based browser.
 
-### Default URL
-
-Edit `browser-mcp.js` line 21:
-
-```javascript
-const DEFAULT_URL = "https://websurf-ai.vercel.app/";
-```
-
 ***
 
 ## ⚡ MCP Tools Available
@@ -164,7 +181,7 @@ Full tool list: See `browser-mcp.js` lines 101-223
 
 ***
 
-##  Integration
+## 🔌 Integration
 
 ### Using with AI Agents
 
@@ -188,26 +205,59 @@ See `websurf-backend/` for FastAPI integration example with Gemini AI.
 
 ***
 
-## Troubleshooting
+##  Troubleshooting
 
-**X "Cannot find chromium executable"**
+**❌ "Cannot find chromium executable"**
 - Run `npx playwright install chromium` in `websurf-mcp/`
 - Or set custom browser path (see Configuration)
 
-**X "Dependencies not installed"**
+**❌ "Dependencies not installed"**
 - First launch installs automatically
 - Manual: `cd websurf-mcp && npm install`
 
-**X "Browser already open" errors**
+**❌ "Browser already open" errors**
 - Each MCP instance creates a **new browser window**
 - Persistent profile is shared across windows
 - Old windows won't conflict with new MCP calls
 
-**X Extension not loading**
+**❌ Extension not loading**
 - Check `chrome-extension/` folder exists
 - Verify path in `browser-mcp.js` line 18
 
+**❌ "Node.js not found"**
+- Launcher scripts auto-download portable Node.js
+- Or install from https://nodejs.org/
+- Portable Node.js is stored in `.node-portable/` folder
+
+**❌ Launcher script won't run (Linux/macOS)**
+- Make executable: `chmod +x websurf-launcher.sh`
+- Ensure bash is installed: `which bash`
+
+**❌ PowerShell execution policy error**
+- Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+- Or use batch script instead: `websurf-launcher.bat`
+
 ***
+
+## 📦 Distribution
+
+```
+websurf-package/
+├── websurf-launcher.ps1    # Windows PowerShell
+├── websurf-launcher.bat    # Windows Batch
+├── websurf-launcher.sh     # Linux/macOS
+├── main-launcher.js        # Node.js entry point
+├── websurf.ico/.png        # Icon files
+├── websurf-mcp/
+├── chrome-extension/
+└── README.md
+```
+
+**Benefits:**
+- ✅ No Node.js required (auto-downloads portable version)
+- ✅ Creates desktop shortcuts automatically
+- ✅ Cross-platform support
+- ✅ Auto-installs dependencies
 
 ### Standalone Executable
 
@@ -230,7 +280,7 @@ websurf-package/
 
 ***
 
-## 🔐 Desktop Client
+## 💻 Desktop Client
 
 For advanced users who want a dedicated desktop application:
 
@@ -242,3 +292,18 @@ For advanced users who want a dedicated desktop application:
 
 ***
 
+## 📝 Launcher Script Features
+
+The launcher scripts provide:
+
+- **Automatic Node.js Detection**: Checks for system Node.js installation
+- **Portable Node.js Download**: Downloads Node.js v22.11.0 if not found (one-time)
+- **Platform Detection**: Auto-detects OS and architecture (x64/ARM64)
+- **Shortcut Creation**: 
+  - Windows: `.lnk` shortcut with icon
+  - Linux: `.desktop` file for application menu
+- **Dependency Management**: Auto-installs npm packages on first run
+- **Color-Coded Output**: Easy-to-read console messages
+- **Error Handling**: Clear error messages and troubleshooting hints
+
+***
