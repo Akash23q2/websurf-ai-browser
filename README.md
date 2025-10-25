@@ -1,200 +1,453 @@
 # WebSurf-AI — Your Intelligent Browsing Companion
 
-**WebSurf-AI** is a powerful, open-source AI agent that revolutionizes your web browsing experience. It integrates seamlessly into your browser as a sidebar extension, providing you with a persistent, context-aware assistant that can perform complex tasks, automate workflows, and enhance your productivity while ensuring your privacy.
+<p align="center">
+  <img src="src/websurf.gif" width="900" height="205" alt="WebSurf-AI Demo">
+</p>
+
+**WebSurf-AI** is a powerful, open-source AI agent that revolutionizes your web browsing experience. It integrates seamlessly as both a browser extension and desktop application, providing you with a persistent, context-aware assistant that can perform complex tasks, automate workflows, and enhance your productivity while ensuring your privacy.
 
 ##
-![Desktop 1](src/websurf-ai.jpg)
+<img src="src/websurf-demo.gif"/>
+
+
+
+
+---
 
 ## Key Highlights
 
--   **✨ AI-Powered Web Browsing:** Delegate tasks to an intelligent agent that can understand and interact with web pages. It can view, scroll, click, fill out forms, and even take screenshots.
--   **Privacy First:** Operates with a separate, sandboxed browser profile to protect your personal data and maintain your privacy. All operations can be run locally.
--   **Persistent Context:** Maintains a consistent and persistent context of your browsing session, allowing for more intelligent and relevant assistance over time.
--   **Easy Control via Sidebar Extension:** A user-friendly sidebar interface allows you to easily control the agent, issue commands, and view its progress without leaving your current tab.
--   **Advanced Data Handling:** Supports embedding and analysis of PDF and text files, allowing the agent to work with a wider range of data sources.
--   **Secure and Local:** Built with security in mind, using OAuth2 for authentication. The entire stack can be run locally, giving you full control over your data.
--   **Modern Tech Stack:** Powered by FastAPI, Pydantic-AI, and a robust Chrome extension, ensuring a high-performance and reliable experience.
--   **Portable Distribution:** Comes with a standalone launcher that automatically handles Node.js runtime and dependencies, making deployment effortless.
+- **AI-Powered Web Browsing:** Delegate tasks to an intelligent agent that can understand and interact with web pages. It can view, scroll, click, fill out forms, and take screenshots.
+- **Privacy First:** Operates with a separate, sandboxed browser profile to protect your personal data and maintain your privacy. All operations can be run locally.
+- **Persistent Context:** Maintains a consistent and persistent context of your browsing session, allowing for more intelligent and relevant assistance over time.
+- **Multiple Deployment Options:** Available as a Chrome extension, Electron desktop app, or standalone MCP server - choose what works best for your workflow.
+- **Advanced Data Handling:** Supports embedding and analysis of PDF and text files, allowing the agent to work with a wider range of data sources.
+- **Secure and Local:** Built with security in mind, using OAuth2 for authentication. The entire stack can be run locally, giving you full control over your data.
+- **Modern Tech Stack:** Powered by FastAPI, Pydantic-AI, Playwright, and robust frontend applications, ensuring high-performance and reliable experience.
+- **Portable Distribution:** Comes with automated launchers that handle dependencies and browser setup, making deployment effortless.
 
-## Preview
-![Desktop 2](src/playwright-extension.jpg)
-
-
+---
 
 ## Overview
 
-WebSurf-AI is a full-stack application designed to bring the power of AI to your web browser. The backend is a FastAPI server that orchestrates the AI agent's actions, while the frontend is a Chrome extension that provides a seamless user interface.
+WebSurf-AI is a full-stack application designed to bring the power of AI to your web browser. The backend is a FastAPI server that orchestrates the AI agent's actions through a Model Context Protocol (MCP) server, while the frontend is available as both a Chrome extension and an Electron desktop application.
 
-The agent is capable of performing a wide range of tasks, from simple web navigation to complex data extraction and form submission. It uses a combination of computer vision and accessibility APIs to understand and interact with web pages, just like a human would.
+The agent is capable of performing a wide range of tasks, from simple web navigation to complex data extraction and form submission. It uses a combination of browser automation and accessibility APIs to understand and interact with web pages, just like a human would.
+
+
+## Websurf-AI App
+![Desktop 2](src/websurf-app.jpg)
+
+## Websurf-AI Extension
+![Desktop 2](src/websurf-extension.jpg)
+
+## In Action
+![Desktop 1](src/websurf-demo1.jpg)
+
+---
 
 ## Tech Stack
 
--   **Backend:** FastAPI (Python)
--   **AI Orchestration:** Pydantic-AI
--   **Browser Automation:** Playwright
--   **Database:** SQLAlchemy (PostgreSQL recommended)
--   **Authentication:** JWT (OAuth2 password flow)
--   **Frontend:** Chrome Extension (JavaScript, HTML, CSS)
--   **MCP Server:** Model Context Protocol server for browser automation
+- **Backend:** FastAPI (Python)
+- **AI Orchestration:** Pydantic-AI with Gemini 2.5 Flash
+- **Browser Automation:** Playwright
+- **Database:** SQLAlchemy (PostgreSQL recommended)
+- **Authentication:** JWT (OAuth2 password flow)
+- **Frontend:** Chrome Extension + Electron Desktop App (JavaScript, HTML, CSS)
+- **MCP Server:** Model Context Protocol server for browser automation
+- **Storage:** ChromaDB for embeddings, Electron Store for desktop persistence
+
+---
 
 ## Features
 
--   **Web Navigation:** Open, close, and navigate between tabs.
--   **Page Interaction:** Click buttons, links, and other elements.
--   **Scrolling:** Scroll up, down, left, or right.
--   **Form Filling:** Fill out text boxes, checkboxes, and other form fields.
--   **Screenshots:** Capture full-page or partial screenshots.
--   **Data Extraction:** Extract text and other data from web pages.
--   **File Embeddings:** Attach and process PDF and text files.
--   **RAG and Conversational AI:** Switch between Retrieval-Augmented Generation for factual queries and a conversational mode for more general chat.
+### Browser Automation
+- **Web Navigation:** Open, close, and navigate between tabs
+- **Page Interaction:** Click buttons, links, and other elements
+- **Scrolling:** Scroll up, down, left, or right
+- **Form Filling:** Fill out text boxes, checkboxes, and other form fields
+- **Screenshots:** Capture full-page or partial screenshots
+- **Data Extraction:** Extract text and other data from web pages
 
-## Quick Run (Development)
+### AI Capabilities
+- **File Embeddings:** Attach and process PDF and text files
+- **RAG Mode:** Retrieval-Augmented Generation for factual queries
+- **Conversational AI:** Natural language chat interface
+- **Auto Mode:** Intelligently switches between RAG and conversational responses
+- **Persistent Memory:** Maintains conversation context across sessions
+
+### Deployment Options
+- **Chrome Extension:** Sidebar interface for in-browser assistance
+- **Desktop App:** Standalone Electron application with system tray
+- **MCP Server:** Direct integration for AI agent development
+
+---
+
+## Quick Start
 
 ### Prerequisites
 
--   Python 3.12+
--   Node.js & npm (optional - portable version auto-downloads if not present)
--   PostgreSQL (or adapt the database URL in your environment)
+- **Python 3.12+** for backend
+- **Node.js 18+** & npm for MCP server and desktop app
+- **PostgreSQL** (or adapt the database URL in your environment)
 
-### 1. Backend
+### 1. Backend Setup
 
--   Create and activate a Python virtual environment.
--   Install dependencies from `pyproject.toml`:
-    ```bash
-    pip install -e .
-    ```
--   Copy the `example.env` file to `.env` and set your database and JWT secrets.
--   Run the FastAPI server:
-    ```bash
-    uvicorn app.app:app --reload --host 0.0.0.0 --port 8000
-    ```
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/websurf-ai.git
+cd websurf-ai/websurf-backend
 
-### 2. MCP Browser Server (Recommended)
+# Create and activate Python virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-The easiest way to run WebSurf-AI is using the automated launcher:
+# Install dependencies
+pip install -e .
 
-#### Windows
+# Configure environment
+cp example.env .env
+# Edit .env with your database credentials and API keys
 
-1. Navigate to the `websurf-build` directory
-2. Run the launcher script:
-   ```powershell
-   .\launch.ps1
-   ```
-3. The script will:
-   - Check for Node.js installation (uses system Node if available)
-   - Download portable Node.js if not found (~30MB, one-time)
-   - Install dependencies automatically
-   - Download Chromium browser (~150MB, one-time)
-   - Launch the browser with the extension pre-loaded
-   - Create a desktop shortcut for future launches
+# Run the FastAPI server
+uvicorn app.app:app --reload --host 0.0.0.0 --port 8000
+```
 
-#### Using the Shortcut
+### 2. MCP Browser Server
 
-After the first run, you can launch WebSurf-AI by:
-- Double-clicking the `WebSurf MCP.lnk` shortcut in the `websurf-build` directory
-- The shortcut automatically applies the WebSurf icon if `websurf.ico` is present
+The MCP server manages browser automation with persistent profiles. Each instance creates a new browser window while maintaining shared cookies and history.
 
-#### Manual Method
+```bash
+cd websurf-build
+node main-launcher.js
+```
 
-Alternatively, you can run the MCP server manually:
+**What happens:**
+- ⚡ Auto-installs Node.js dependencies
+- ⚡ Downloads Chromium browser (~150MB, one-time)
+- ⚡ Launches browser with extension pre-loaded
+- ⚡ Starts MCP server ready for AI connections
+
+**Alternative:**
 ```bash
 cd websurf-mcp
 node browser-mcp.js
 ```
 
-This will launch the AI-powered browser with the extension loaded.
+### 3. Frontend Options
 
-### 3. Frontend (Chrome Extension)
+#### Option A: Chrome Extension
 
-If you prefer to load the extension manually:
+The extension loads automatically when the MCP server launches. For manual loading:
 
--   Navigate to `chrome://extensions` in your Chrome browser.
--   Enable "Developer mode".
--   Click "Load unpacked" and select the `chrome-extension` directory.
--   The WebSurf-AI icon will appear in your toolbar. Click it to open the sidebar and start using the agent.
+1. Navigate to `chrome://extensions`
+2. Enable "Developer mode"
+3. Click "Load unpacked"
+4. Select the `chrome-extension` directory
+5. Click the WebSurf-AI icon to open the sidebar
 
-**Note:** Sign up before logging in. All data stays on your local machine with OAuth2 protection for privacy.
+#### Option B: Desktop Application
 
-## Distribution
+```bash
+cd websurf-build/electron-app
+npm install
+npm start
+```
 
-### Creating a Portable Package
+**Build installers:**
+```bash
+npm run build       # Current platform
+npm run build:win   # Windows
+npm run build:mac   # macOS
+npm run build:linux # Linux
+```
 
-The launcher system creates a fully portable distribution that includes:
-- Portable Node.js runtime (if system Node is not available)
-- All dependencies auto-installed on first run
-- Chromium browser downloaded automatically
-- Desktop shortcut with custom icon
-- No installation required for end users
-
-To distribute WebSurf-AI:
-1. Share the entire `websurf-build` and `websurf-mcp` directories
-2. Users simply run `launch.ps1` (Windows) or use the created shortcut
-3. Everything downloads and sets up automatically on first launch
+---
 
 ## Project Structure
 
 ```
 websurf-ai/
-├── app/                      # FastAPI backend
-│   ├── app.py               # Application bootstrap
-│   ├── routes/              # API endpoints
-│   └── services/            # Business logic
-├── chrome-extension/         # Browser extension
-│   ├── manifest.json        # Extension configuration
-│   └── sidepanel.js         # Sidebar interface
-├── websurf-mcp/             # MCP server implementation
+├── websurf-backend/          # FastAPI backend
+│   ├── app/
+│   │   ├── app.py           # Application bootstrap
+│   │   ├── routes/          # API endpoints
+│   │   ├── services/        # Business logic & AI agent
+│   │   └── schemas/         # Pydantic models
+│   └── pyproject.toml       # Python dependencies
+│
+├── websurf-mcp/             # MCP server
 │   ├── browser-mcp.js       # Main MCP server
-│   └── browser-server.js    # Browser automation server
-└── websurf-build/           # Portable launcher
-    ├── launch.ps1           # Windows launcher script
-    ├── main-launcher.js     # Node.js launcher logic
-    └── websurf.ico          # Application icon
+│   ├── browser-server.js    # Browser automation server
+│   └── package.json         # Node.js dependencies
+│
+├── websurf-build/           # Launchers and build scripts
+│   ├── main-launcher.js     # Automated launcher
+│   ├── launch.ps1           # PowerShell launcher (Windows)
+│   ├── websurf.ico          # Application icon
+│   └── electron-app/        # Desktop application
+│       ├── main.js          # Electron main process
+│       ├── preload.js       # Security bridge
+│       └── package.json     # Desktop app config
+│
+└── chrome-extension/        # Browser extension
+    ├── manifest.json        # Extension configuration
+    ├── sidepanel.html       # Sidebar interface
+    ├── auth.js              # Authentication logic
+    ├── chat.js              # Chat functionality
+    └── styles.css           # Styling
 ```
 
-## Key Files
+---
 
--   `app/app.py`: FastAPI application bootstrap and middleware.
--   `app/routes/agent_routes.py`: API endpoints for controlling the AI agent.
--   `app/routes/auth_routes.py`: User signup, login, and profile management.
--   `app/services/agent_service.py`: Core logic for the AI agent's tasks.
--   `chrome-extension/manifest.json`: Configuration for the Chrome extension.
--   `chrome-extension/sidepanel.js`: Frontend logic for the sidebar interface.
--   `websurf-mcp/browser-mcp.js`: Model Context Protocol server for browser automation.
--   `websurf-build/launch.ps1`: Automated launcher with dependency management.
+## Configuration
+
+### Backend Configuration
+
+Edit `websurf-backend/.env`:
+
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost/websurf_db
+
+# JWT Authentication
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# AI Model
+GOOGLE_API_KEY=your-gemini-api-key
+
+# MCP Server Path (optional)
+MCP_BROWSER_SCRIPT_PATH=/path/to/websurf-mcp/browser-mcp.js
+```
+
+### Browser Configuration
+
+Edit `websurf-mcp/browser-mcp.js`:
+
+```javascript
+// Browser profile location (line 17)
+const PROFILE_PATH = "C:\\websurf-browser";
+
+// Default starting URL (line 21)
+const DEFAULT_URL = "https://websurf-ai.vercel.app/";
+
+// Custom browser executable (line 59)
+executablePath: path.resolve(__dirname, "../websurf-build/chromium/chrome.exe")
+```
+
+### Desktop App Configuration
+
+Edit `electron-app/config.js`:
+
+```javascript
+const CONFIG = {
+  BACKEND_URL: 'http://localhost:8000'  // Your backend URL
+};
+```
+
+---
 
 ## Important API Endpoints
 
--   `POST /signup`: Register a new user.
--   `POST /token`: Obtain a JWT for authentication.
--   `GET /users/me/`: Get the current user's profile.
--   `PUT /update_profile`: Update the current user's profile.
--   `POST /agent/run`: Execute a task with the AI agent.
--   `GET /agent/collections`: Get available RAG embedding collections.
+### Authentication
+- `POST /signup` - Register a new user
+- `POST /token` - Obtain a JWT for authentication
+- `GET /users/me/` - Get current user profile
+- `PUT /update_profile` - Update user profile
+
+### AI Agent
+- `POST /agent/run` - Execute a task with the AI agent
+- `GET /agent/collections` - Get available RAG embedding collections
+
+### Document Processing
+- `POST /agent/embed` - Create embeddings from documents
+- `GET /agent/embeddings` - List all embedding collections
+
+---
+
+## Distribution
+
+### Chrome Extension Distribution
+
+Package the extension:
+1. Zip the `chrome-extension` directory
+2. Upload to Chrome Web Store or distribute as unpacked extension
+
+### Desktop App Distribution
+
+Build standalone installers:
+
+```bash
+cd websurf-build/electron-app
+npm install
+npm run build
+```
+
+**Output:**
+- `dist/WebSurf AI Setup.exe` (Windows)
+- `dist/WebSurf AI.dmg` (macOS)
+- `dist/WebSurf AI.AppImage` (Linux)
+
+### MCP Server Distribution
+
+For developers integrating the MCP server:
+
+```bash
+cd websurf-build
+npm install
+npm run build
+```
+
+Creates portable executables that bundle Node.js runtime and dependencies.
+
+---
 
 ## Troubleshooting
 
-### Launcher Issues
+### Backend Issues
 
-If the launcher fails to start:
-1. Ensure you have internet connectivity for first-time setup
-2. Check that no antivirus is blocking the downloads
-3. Verify disk space (~200MB required for browser and Node.js)
-4. Try running PowerShell as Administrator if permission errors occur
+**Database connection errors:**
+- Verify PostgreSQL is running
+- Check `DATABASE_URL` in `.env`
+- Ensure database exists: `createdb websurf_db`
+
+**JWT authentication errors:**
+- Verify `SECRET_KEY` is set in `.env`
+- Token may have expired - login again
+
+**MCP client connection fails:**
+- Check `browser-mcp.js` path is correct
+- Ensure MCP server is running
+- Verify Node.js is installed
+
+### MCP Server Issues
+
+**"Cannot find chromium executable":**
+- Browser downloads automatically on first run
+- Manual install: `cd websurf-mcp && npx playwright install chromium`
+
+**"Dependencies not installed":**
+- Dependencies install automatically on first launch
+- Manual install: `cd websurf-mcp && npm install`
+
+**Extension not loading:**
+- Verify `chrome-extension/` folder exists
+- Check path in `browser-mcp.js` line 18
+
+### Desktop App Issues
+
+**App won't start:**
+- Run `npm install` in `electron-app` directory
+- Check `config.js` has correct backend URL
+
+**Can't connect to backend:**
+- Ensure backend is running on `http://localhost:8000`
+- Check CORS settings in FastAPI backend
+- Verify firewall isn't blocking connections
+
+**System tray icon not showing:**
+- Ensure `icons/icon.png` exists
+- Restart the application
 
 ### Manual Cleanup
 
-To reset the installation:
-```powershell
-# Remove portable Node.js
-Remove-Item -Recurse -Force .node-portable
+Reset the installation:
 
+```bash
 # Remove browser installation
-Remove-Item -Recurse -Force chromium
+rm -rf websurf-build/chromium
 
 # Remove dependency markers
-Remove-Item websurf-mcp/.deps-installed
-Remove-Item .browser-installed
+rm websurf-mcp/.deps-installed
+rm websurf-build/.browser-installed
+
+# Clear browser profile
+rm -rf C:/websurf-browser  # Windows
+rm -rf ~/websurf-browser   # Linux/macOS
+
+# Reinstall dependencies
+cd websurf-mcp && npm install
 ```
+
+---
+
+## Development
+
+### Backend Development
+
+```bash
+cd websurf-backend
+source venv/bin/activate
+
+# Run with auto-reload
+uvicorn app.app:app --reload --host 0.0.0.0 --port 8000
+
+# Run tests
+pytest
+
+# Format code
+black app/
+```
+
+### Frontend Development
+
+**Chrome Extension:**
+```bash
+cd chrome-extension
+# Make changes and reload extension in chrome://extensions
+```
+
+**Desktop App:**
+```bash
+cd electron-app
+npm run dev  # Run with DevTools open
+```
+
+### MCP Server Development
+
+```bash
+cd websurf-mcp
+node browser-mcp.js  # Test server directly
+```
+
+---
+
+## Security Considerations
+
+- **OAuth2 Authentication:** All API endpoints require JWT tokens
+- **Sandboxed Browser:** Browser runs in isolated profile
+- **CORS Protection:** Backend configured with strict CORS policies
+- **Context Isolation:** Desktop app uses Electron's security best practices
+- **No Credential Storage:** Passwords are never stored, only hashed
+- **Local-First:** All data can be stored locally without external services
+
+---
+
+## Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## Acknowledgments
+
+- Built with ✨ using FastAPI, Pydantic-AI, and Playwright
+- Powered by ⚡ Gemini 2.5 Flash for AI capabilities
+- Browser automation via 🏄 Playwright
+- Desktop app built with Electron
 
 ---
 
