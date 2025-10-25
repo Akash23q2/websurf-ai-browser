@@ -1,8 +1,6 @@
 # WebSurf-AI — Your Intelligent Browsing Companion
 
-<p align="center">
-  <img src="src/websurf.gif" width="900" height="205" alt="WebSurf-AI Demo">
-</p>
+  <img src="src/websurf.gif" />
 
 **WebSurf-AI** is a powerful, open-source AI agent that revolutionizes your web browsing experience. It integrates seamlessly as both a browser extension and desktop application, providing you with a persistent, context-aware assistant that can perform complex tasks, automate workflows, and enhance your productivity while ensuring your privacy.
 
