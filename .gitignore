@@ -6,7 +6,8 @@ dist/
 wheels/
 *.egg-info
 
-playwright-mcp/
+chromium
 # Virtual environments
 .venv
 .env
+node_modules
