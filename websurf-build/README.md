@@ -1,155 +1,244 @@
-# WebSurf MCP Build Instructions
+# WebSurf MCP
 
-## Prerequisites
+**AI-powered browser automation with persistent memory and intelligent control**
 
-- Node.js 18+ installed
-- npm or yarn package manager
-- Git (for cloning the repository)
+WebSurf MCP combines browser automation capabilities with a Model Context Protocol (MCP) server, enabling AI agents to browse, interact with, and extract information from websites while maintaining session persistence.
 
-## Project Structure
+---
 
-```
-root/
-├── websurf-build/          # Build configuration folder
-│   ├── main.js             # Launcher script
-│   ├── package.json        # Build config with pkg settings
-│   └── websurf.ico         # Application icon
-├── websurf-mcp/            # Main MCP server code
-│   ├── browser-mcp.js
-│   ├── browser-server.js
-│   └── package.json
-└── README.md
-```
+## ✨ What is WebSurf MCP?
 
-## Building the Executable
+WebSurf MCP is a browser automation server that:
+- Launches a **persistent browser instance** with saved cookies, logins, and history
+- Provides **MCP tools** for AI agents to control the browser (navigate, click, type, extract data)
+- Maintains **session state** across multiple interactions
+- Supports **Chrome extensions** for enhanced functionality
 
-### 1. Install Build Dependencies
+***
 
-Navigate to the `websurf-build` folder and install dependencies:
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js 18+** installed
+- npm package manager
+- Windows, Linux, or macOS
+
+### Quick Start
+
+#### Option 1: Run via Executable (Recommended)
+
+1. Download the latest release from `websurf-build/`
+2. Double-click `WebSurf.exe` (Windows) or run the executable
+3. Browser launches automatically with MCP server ready
+
+#### Option 2: Run via Node.js
 
 ```bash
 cd websurf-build
-npm install
+node main-launcher.js
 ```
 
-### 2. Build the Executable
+The launcher will:
+- Check and install dependencies automatically
+- Download Chromium browser if needed
+- Launch the MCP server with browser
 
-#### Windows (64-bit)
+***
+
+## 📦 Project Structure
+
+```
+websurf-ai/
+├── websurf-build/           # Build and launcher scripts
+│   ├── main-launcher.js     # Main entry point
+│   ├── build-script.ps1     # Windows build script
+│   ├── websurf.ico          # Application icon
+│   └── electron-app/        # Desktop client (see folder for details)
+├── websurf-mcp/             # MCP server code
+│   ├── browser-mcp.js       # Main MCP server
+│   └── package.json         # Dependencies
+├── chrome-extension/        # Browser extension for enhanced features
+└── websurf-backend/         # Backend API and agent logic
+```
+
+***
+
+##  How to Use
+
+### Browser-Based Access
+
+WebSurf provides a **web frontend** for easy interaction:
+
+1. Launch WebSurf MCP (via executable or `main-launcher.js`)
+2. Open the frontend in your browser
+3. Use the browser agent while browsing normally
+4. The **Chrome extension** provides additional controls directly in-browser
+
+### Desktop Client
+
+For a dedicated experience, WebSurf includes an **Electron desktop app**:
+
+📁 **See `websurf-build/electron-app/` for installation and usage details**
+
+***
+
+## 🛠️ Building from Source
+
+### Build Executable
+
+Navigate to `websurf-build/` and run:
+
+**Windows:**
 ```bash
+npm install
 npm run build
 ```
 
-This creates `websurf.exe` in the `websurf-build/dist` folder.
-
-#### All Platforms
+**All Platforms:**
 ```bash
 npm run build-all
 ```
 
-This creates executables for:
-- Windows (x64)
-- Linux (x64)
-- macOS (x64)
+Outputs:
+- `dist/websurf.exe` (Windows)
+- `dist/websurf-linux` (Linux)
+- `dist/websurf-macos` (macOS)
 
-### 3. Manual Build with Custom Options
+### Add Icon (Windows only)
 
-```bash
-pkg . --targets node20-win-x64 --output websurf.exe
-```
-
-#### Available Targets:
-- `node20-win-x64` - Windows 64-bit
-- `node20-linux-x64` - Linux 64-bit
-- `node20-macos-x64` - macOS 64-bit (Intel)
-- `node20-macos-arm64` - macOS 64-bit (Apple Silicon)
-
-## Adding Icon to Executable (Windows)
-
-After building, use `rcedit` to add the icon:
-
-### Install rcedit
 ```bash
 npm install -g rcedit
-```
-
-### Apply Icon
-```bash
 rcedit dist/websurf.exe --set-icon websurf.ico
 ```
 
-Or use the PowerShell script:
+***
 
-```powershell
-# install-icon.ps1
-npm install -g rcedit
-rcedit dist/websurf.exe --set-icon websurf.ico
-Write-Host "Icon applied successfully!" -ForegroundColor Green
+## 🔧 Configuration
+
+### Browser Profile
+
+Browser data is stored at: `C:\websurf-browser`
+
+This includes:
+- 🍪 Cookies and sessions
+- 🔑 Saved passwords
+- 📚 Browsing history
+- ⚙️ Extensions and settings
+
+### Custom Browser Path
+
+Edit `browser-mcp.js` line 59:
+
+```javascript
+executablePath: path.resolve(__dirname, "../websurf-build/chromium/chrome.exe")
 ```
 
-## How It Works
+Change to your preferred Chromium-based browser.
 
-### First Launch
-1. User runs `websurf.exe`
-2. Launcher checks if dependencies are installed
-3. If not, runs `npm install` in `websurf-mcp` folder
-4. Installs `@modelcontextprotocol/sdk`, `playwright`, etc.
-5. Creates a marker file `.deps-installed`
-6. Launches browser server and MCP server
+### Default URL
 
-### Subsequent Launches
-1. Detects existing dependencies
-2. Immediately launches both servers
-3. Fast startup (< 2 seconds)
+Edit `browser-mcp.js` line 21:
 
-## Distribution
-
-### Option 1: Executable Only
-Distribute just the `.exe` file. Users need:
-- Node.js installed on their system
-- Internet connection for first-run dependency download
-
-### Option 2: Full Package
-Create a zip with:
-```
-websurf-package/
-├── websurf.exe
-├── websurf-mcp/
-│   ├── browser-mcp.js
-│   ├── browser-server.js
-│   └── package.json
-└── README.md
+```javascript
+const DEFAULT_URL = "https://websurf-ai.vercel.app/";
 ```
 
-### Option 3: With Pre-installed Dependencies
-Include `node_modules` in the package (larger file size but no install needed):
+***
+
+## ⚡ MCP Tools Available
+
+The server provides these tools for AI agents:
+
+| Tool | Description |
+|------|-------------|
+| `openPage` | Navigate to a URL |
+| `clickElement` | Click on elements using CSS selectors |
+| `typeText` | Type text into input fields |
+| `extractText` | Extract text content from page |
+| `screenshot` | Capture page screenshots |
+| `scrollPage` | Scroll the page |
+| `getTitle` / `getURL` | Get page information |
+
+Full tool list: See `browser-mcp.js` lines 101-223
+
+***
+
+##  Integration
+
+### Using with AI Agents
+
+WebSurf MCP uses **stdio transport** for communication:
+
+```javascript
+import { MCPClient } from '@modelcontextprotocol/sdk/client';
+
+const client = new MCPClient({
+  command: 'node',
+  args: ['path/to/browser-mcp.js']
+});
+
+await client.connect();
+const result = await client.callTool('openPage', { url: 'https://example.com' });
 ```
-websurf-package/
-├── websurf.exe
-├── websurf-mcp/
-│   ├── browser-mcp.js
-│   ├── browser-server.js
-│   ├── package.json
-│   └── node_modules/        # Pre-installed
-└── README.md
-```
+
+### Using with Python Backend
+
+See `websurf-backend/` for FastAPI integration example with Gemini AI.
+
+***
 
 ## Troubleshooting
 
-### "Cannot find module" errors
-- Ensure all scripts are in the `pkg.scripts` array in `package.json`
-- Try building with `--debug` flag
+**X "Cannot find chromium executable"**
+- Run `npx playwright install chromium` in `websurf-mcp/`
+- Or set custom browser path (see Configuration)
 
-### Icon not showing
-- Use `rcedit` after building
-- Ensure `websurf.ico` is a valid Windows icon file
-- Icon should be 256x256 or smaller
+**X "Dependencies not installed"**
+- First launch installs automatically
+- Manual: `cd websurf-mcp && npm install`
 
-### Slow first launch
-- This is normal as npm installs dependencies
-- Subsequent launches are fast
-- Consider distributing with pre-installed `node_modules`
+**X "Browser already open" errors**
+- Each MCP instance creates a **new browser window**
+- Persistent profile is shared across windows
+- Old windows won't conflict with new MCP calls
 
-### Browser installation
-- Playwright browsers are NOT auto-installed
-- Users must run `npx playwright install chromium` manually if needed
-- Or modify the launcher to include browser installation
+**X Extension not loading**
+- Check `chrome-extension/` folder exists
+- Verify path in `browser-mcp.js` line 18
+
+***
+
+### Standalone Executable
+
+Distribute just the `.exe` file:
+- ✅ Users need Node.js installed
+- ✅ Auto-installs dependencies on first run
+- ✅ Small file size (~50MB)
+
+### Full Package
+
+Include everything pre-installed:
+```
+websurf-package/
+├── websurf.exe
+├── websurf-mcp/
+│   └── node_modules/     # Pre-installed
+├── chrome-extension/
+└── README.md
+```
+
+***
+
+## 🔐 Desktop Client
+
+For advanced users who want a dedicated desktop application:
+
+📁 **Check `websurf-build/electron-app/` for:**
+- Installation instructions
+- Feature details
+- Build configuration
+- Usage guide
+
+***
+
