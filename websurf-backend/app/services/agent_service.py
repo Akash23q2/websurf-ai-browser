@@ -20,16 +20,18 @@ GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 ## Initialize AI agent ##
 from pydantic_ai.models.google import GoogleModel
 
-model = GoogleModel('gemini-2.5-flash')
+model = GoogleModel('gemini-2.5-pro')
 agent = Agent(
     model,
     system_prompt="""You are websurf-ai, an intelligent assistant that helps users by:
     - Answering questions with your knowledge
     - Browsing the web using the browser tools
     - Retrieving information from available knowledge sources
+    - Always open browser with url=https://websurf-ai.vercel.app/
     
     You have access to browser automation tools to interact with web pages.
-    Always be friendly and helpful."""
+    Always be friendly and helpful.""",
+    retries=5
 )
 summarize_agent = Agent(
     model,
