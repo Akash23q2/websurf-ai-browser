@@ -33,14 +33,9 @@ let defaultPage = null;
 // Define persistent profile path
 const PROFILE_PATH = "C:\\websurf-browser";
 
-// Define extension path (absolute)
-const EXTENSION_PATH =  path.resolve(__dirname, "../chrome-extension");
 
 // Default starting URL
 const DEFAULT_URL = "https://websurf-ai.vercel.app/";
-
-// CDP endpoint file to share browser instance
-const CDP_ENDPOINT_FILE = path.join(PROFILE_PATH, ".cdp-endpoint");
 
 // Check if browser context is still valid
 async function isBrowserValid() {
@@ -64,7 +59,7 @@ function resetBrowser() {
   console.error("Browser state has been reset");
 }
 
-// Try to connect to existing browser first, then launch new one
+// Initialize browser with persistent profile
 async function ensureBrowser() {
   // Check if existing browser is still valid
   if (browser && !(await isBrowserValid())) {
@@ -73,93 +68,35 @@ async function ensureBrowser() {
   }
 
   if (!browser) {
-    // Try to connect to existing browser instance first
-    if (fs.existsSync(CDP_ENDPOINT_FILE)) {
-      try {
-        const cdpEndpoint = fs.readFileSync(CDP_ENDPOINT_FILE, 'utf-8').trim();
-        console.error(`Attempting to connect to existing browser at: ${cdpEndpoint}`);
-        
-        browser = await chromium.connectOverCDP(cdpEndpoint);
-        console.error("✓ Successfully connected to existing browser instance!");
-        
-        // Get existing contexts
-        const contexts = browser.contexts();
-        if (contexts.length > 0) {
-          const pages = contexts[0].pages();
-          if (pages.length > 0) {
-            defaultPage = pages[0];
-            console.error("✓ Using existing page from connected browser");
-          }
-        }
-        
-        if (!defaultPage) {
-          defaultPage = await browser.contexts()[0].newPage();
-          console.error("Created new page in connected browser");
-        }
-        
-        return browser;
-      } catch (err) {
-        console.error("Failed to connect to existing browser:", err.message);
-        console.error("Will launch new browser instance...");
-        // Clean up stale endpoint file
-        try {
-          fs.unlinkSync(CDP_ENDPOINT_FILE);
-        } catch (e) {}
-      }
+    console.error("🚀 Launching browser with persistent profile...");
+    
+    // Ensure profile directory exists
+    if (!fs.existsSync(PROFILE_PATH)) {
+      fs.mkdirSync(PROFILE_PATH, { recursive: true });
+      console.error(`Created profile directory: ${PROFILE_PATH}`);
     }
 
-    // Launch new browser with CDP enabled
-    console.error("Launching new browser instance...");
     browser = await chromium.launchPersistentContext(PROFILE_PATH, {
       headless: false,
-      executablePath: path.resolve(__dirname, "../websurf-build/chromium/chrome.exe"), //change it with any browser of your liking {chromium based}
+      executablePath: path.resolve(__dirname, "../websurf-build/chromium/chrome.exe"),
       args: [
         '--start-maximized',
         '--disable-blink-features=AutomationControlled',
-        `--disable-extensions-except=${EXTENSION_PATH}`,
-        `--load-extension=${EXTENSION_PATH}`,
-        '--remote-debugging-port=9222', // Enable CDP
       ],
       viewport: null,
       acceptDownloads: true,
     });
     
-    // Save CDP endpoint for other processes to connect
-    try {
-      const cdpEndpoint = browser.context().browser()?.options?.cdpEndpoint || 
-                         `http://localhost:9222`;
-      fs.writeFileSync(CDP_ENDPOINT_FILE, cdpEndpoint);
-      console.error(`✓ CDP endpoint saved to: ${CDP_ENDPOINT_FILE}`);
-    } catch (err) {
-      console.error("Warning: Could not save CDP endpoint:", err.message);
-    }
-    
     console.error(`✓ Browser launched with persistent profile at: ${PROFILE_PATH}`);
-    console.error(`✓ Extension loaded from: ${EXTENSION_PATH}`);
     
     // Get or create the first page
     const pages = browser.pages();
     if (pages.length > 0) {
       defaultPage = pages[0];
-      console.error("Using existing page from persistent context");
-      
-      if (defaultPage.url() === 'about:blank' || defaultPage.url() === '') {
-        try {
-          await defaultPage.goto(DEFAULT_URL, { waitUntil: 'domcontentloaded' });
-          console.error(`Navigated to default URL: ${DEFAULT_URL}`);
-        } catch (err) {
-          console.error(`Failed to navigate to ${DEFAULT_URL}:`, err);
-        }
-      }
+      console.error("✓ Using existing page from persistent context");
     } else {
       defaultPage = await browser.newPage();
-      console.error("Created new default page");
-      try {
-        await defaultPage.goto(DEFAULT_URL, { waitUntil: 'domcontentloaded' });
-        console.error(`Navigated to default URL: ${DEFAULT_URL}`);
-      } catch (err) {
-        console.error(`Failed to navigate to ${DEFAULT_URL}:`, err);
-      }
+      console.error("✓ Created new default page");
     }
     
     await removeFocusFromAddressBar(defaultPage);
@@ -202,7 +139,7 @@ async function removeFocusFromAddressBar(page) {
       console.error('Error clicking page:', e);
     }
     
-    console.error("Removed address bar focus");
+    console.error("✓ Removed address bar focus");
   } catch (err) {
     console.error("Failed to remove address bar focus:", err);
   }
@@ -313,7 +250,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             pageId: { type: "string", description: "Page ID (optional, uses default if not provided)" },
             selector: { type: "string", description: "CSS selector" },
-            timeout: { type: "number", description: "Timeout in ms", default: 5000 },
+            timeout: { type: "number", description: "Timeout in ms", default: 30000 },
           },
           required: ["selector"],
         },
@@ -546,11 +483,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "waitForSelector": {
         const page = await getPage(args.pageId);
-        await page.waitForSelector(args.selector, { timeout: args.timeout || 5000 });
-        return {
-          content: [{ type: "text", text: JSON.stringify({ message: `Selector ${args.selector} appeared` }) }],
-        };
-      }
+        try {
+            await page.waitForSelector(args.selector, { 
+                timeout: args.timeout || 30000,
+                state: 'visible'  // More specific wait condition
+            });
+            return {
+                content: [{ type: "text", text: JSON.stringify({ 
+                    success: true,
+                    message: `Selector ${args.selector} appeared` 
+                }) }],
+            };
+        } catch (error) {
+            // Don't throw - return error as data
+            return {
+                content: [{ type: "text", text: JSON.stringify({ 
+                    success: false,
+                    error: `Selector ${args.selector} not found: ${error.message}`,
+                    suggestion: "Try using a different selector or check if the page loaded correctly"
+                }) }],
+                // Don't set isError: true - this prevents ModelRetry loop
+            };
+        }
+    }
+
 
       case "goBack": {
         const page = await getPage(args.pageId);
@@ -684,28 +640,45 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // Start the server
 const transport = new StdioServerTransport();
 
-// Don't auto-launch - wait for first use or connect to existing
-console.error("MCP Browser Server starting...");
-console.error("Will connect to existing browser or launch new instance on first use");
+// Launch browser immediately when script starts
+console.error("========================================");
+console.error("  WebSurf Browser MCP Server");
+console.error("========================================");
+// (async () => {
+//   try {
+//     await ensureBrowser();
+//     const page = await getDefaultPage();
+    
+//     // Navigate to default URL
+//     try {
+//       await page.goto(DEFAULT_URL, { waitUntil: 'domcontentloaded', timeout: 10000 });
+//       console.error(`✓ Navigated to: ${DEFAULT_URL}`);
+//     } catch (err) {
+//       console.error(`Failed to navigate to ${DEFAULT_URL}:`, err.message);
+//     }
+    
+//     console.error("========================================");
+//     console.error("  Browser is ready!");
+//     console.error("========================================");
+//     console.error("• All saved data, cookies, and extensions loaded");
+//     console.error("• MCP server can connect to this browser\n");
+//   } catch (err) {
+//     console.error("❌ Failed to pre-launch browser:", err);
+//     process.exit(1);
+//   }
+// })();
 
 await server.connect(transport);
 
 console.error("MCP Browser Server running on stdio with persistent profile");
 console.error(`Profile location: ${PROFILE_PATH}`);
-console.error(`Extension location: ${EXTENSION_PATH}`);
-console.error(`Default URL: ${DEFAULT_URL}`);
+console.error(`Default URL: ${DEFAULT_URL}\n`);
 
 setInterval(() => {}, 1 << 30);
 
 // Cleanup handlers
 process.on('SIGINT', async () => {
   console.error('Received SIGINT, cleaning up...');
-  try {
-    if (fs.existsSync(CDP_ENDPOINT_FILE)) {
-      fs.unlinkSync(CDP_ENDPOINT_FILE);
-    }
-  } catch (e) {}
-  
   if (browser) {
     try {
       await browser.close();
@@ -719,12 +692,6 @@ process.on('SIGINT', async () => {
 
 process.on('SIGTERM', async () => {
   console.error('Received SIGTERM, cleaning up...');
-  try {
-    if (fs.existsSync(CDP_ENDPOINT_FILE)) {
-      fs.unlinkSync(CDP_ENDPOINT_FILE);
-    }
-  } catch (e) {}
-  
   if (browser) {
     try {
       await browser.close();
