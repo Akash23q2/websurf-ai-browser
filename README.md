@@ -92,7 +92,7 @@ The agent is capable of performing a wide range of tasks, from simple web naviga
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/websurf-ai.git
+git clone https://github.com/Akash23q2/websurf-ai-browser/
 cd websurf-ai/websurf-backend
 
 # Create and activate Python virtual environment
